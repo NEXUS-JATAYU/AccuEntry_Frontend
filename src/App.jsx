@@ -1,7 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import OpenAccountPage from './pages/OpenAccountPage';
-import './App.css';
 
 function App() {
   return (

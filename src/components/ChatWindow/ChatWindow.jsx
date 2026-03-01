@@ -6,49 +6,56 @@ const MOCK_START_MESSAGE = {
     text: "Welcome to Citi! I'm here to help you open a new account. Whether you're interested in a Checking Account, Savings Account, or Credit Card, I'll guide you through the process step by step.\n\nWhat type of account would you like to open today?",
 };
 
+
 export default function ChatWindow() {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([MOCK_START_MESSAGE]);
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef(null);
+    const [sessionId] = useState(() => crypto.randomUUID());
+    const BACKEND_URL = import.meta.env.BACKEND_FASTAPI_URL;
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
-    const sendMessage = (text) => {
-        if (!text.trim() || isLoading) return;
+   const sendMessage = async (text) => {
+    if (!text.trim() || isLoading) return;
 
-        const newMessages = [...messages, { id: Date.now().toString(), role: 'user', text }];
-        setMessages(newMessages);
-        setInput('');
-        setIsLoading(true);
+    const newMessages = [...messages, { id: Date.now().toString(), role: 'user', text }];
+    setMessages(newMessages);
+    setInput('');
+    setIsLoading(true);
 
-        setTimeout(() => {
-            let replyMessage = "I understand. Could you please provide your full legal name (first and last)?";
+    try {
+        const response = await fetch('http://localhost:8000/chat', {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                session_id: sessionId,
+                user_input : text
+            })
+        });
 
-            if (text.toLowerCase().includes('name is') || text.toLowerCase().includes('my name')) {
-                replyMessage = "Thank you. Now, what is your date of birth?";
-            } else if (text.match(/\d{2}\/\d{2}\/\d{4}/)) {
-                replyMessage = "Great! What is your best contact email address?";
-            } else if (text.includes('@')) {
-                replyMessage = "Thanks. Could you share your phone number as well?";
-            } else if (text.match(/\d{3}/)) {
-                replyMessage = "Awesome. We have almost everything we need to start. Please provide your mailing address.";
+        const data = await response.json();
+
+        setMessages((prev) => [
+            ...prev,
+            {
+                id: (Date.now() + 1).toString(),
+                role: "assistant",
+                text: data.message
             }
+        ]);
 
-            setMessages((prev) => [
-                ...prev,
-                {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    text: replyMessage,
-                },
-            ]);
-            setIsLoading(false);
-        }, 1200);
-    };
+    } catch (error) {
+        console.error("Chat error:", error);
+    }
 
+    setIsLoading(false);
+};
     const handleSubmit = (e) => {
         e.preventDefault();
         sendMessage(input);
