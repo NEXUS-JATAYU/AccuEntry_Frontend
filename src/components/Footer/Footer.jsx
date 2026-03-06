@@ -4,9 +4,9 @@ export default function Footer() {
             <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-wrap">
-                        <span className="text-xl font-bold text-citi-blue shrink-0">citi</span>
+                        <span className="text-xl font-bold text-citi-blue shrink-0">nexus</span>
                         <span className="text-xs text-gray-500 leading-relaxed max-w-2xl">
-                            {'© 2026 Citigroup Inc. Citi, Citi and Arc Design and other marks used herein are service marks of Citigroup Inc. or its affiliates, used and registered throughout the world.'}
+                            {'© 2026 Nexusgroup Inc. Nexus, Nexus and Arc Design and other marks used herein are service marks of Nexusgroup Inc. or its affiliates, used and registered throughout the world.'}
                         </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 shrink-0">

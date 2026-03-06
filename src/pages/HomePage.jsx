@@ -9,28 +9,28 @@ import Icon from '../components/common/Icon';
 
 const products = [
     {
-        label: 'Citi® Checking Accounts',
+        label: 'Nexus® Checking Accounts',
         title: 'Simplified Banking',
         description:
-            'Citi mobile banking allows you to manage your money and pay friends – all while on-the-go. Member FDIC.',
+            'Nexus mobile banking allows you to manage your money and pay friends – all while on-the-go. Member FDIC.',
         imageSrc: '/images/checking.jpg',
         imageAlt: 'People enjoying a day out together - checking accounts',
     },
     {
-        label: 'Citi® Savings Accounts',
+        label: 'Nexus® Savings Accounts',
         title: 'Save More, Earn More',
         description:
-            'At Citi, start saving with ease and grow with confidence. Member FDIC.',
+            'At Nexus, start saving with ease and grow with confidence. Member FDIC.',
         imageSrc: '/images/savings.jpg',
         imageAlt: 'Friends jumping on a beach - savings accounts',
     },
     {
-        label: 'Citi® / AAdvantage® Credit Cards',
-        title: 'Explore Citi® / AAdvantage® cards',
+        label: 'Nexus® / Advantage® Credit Cards',
+        title: 'Explore Nexus® / AAdvantage® cards',
         description:
-            'Travel to over 1,000 destinations worldwide with AAdvantage® bonus miles. Plus, redeem miles for Business and First Class upgrades, car rentals, hotel stays and more.',
+            'Travel to over 1,000 destinations worldwide with Advantage® bonus miles. Plus, redeem miles for Business and First Class upgrades, car rentals, hotel stays and more.',
         imageSrc: '/images/credit-cards.jpg',
-        imageAlt: 'Collection of Citi credit cards - AAdvantage cards',
+        imageAlt: 'Collection of Nexus credit cards - Advantage cards',
     },
 ];
 

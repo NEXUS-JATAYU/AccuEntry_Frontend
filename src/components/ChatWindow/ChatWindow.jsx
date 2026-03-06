@@ -3,7 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 const MOCK_START_MESSAGE = {
     id: 'welcome',
     role: 'assistant',
-    text: "Welcome to Citi! I'm here to help you open a new account. Whether you're interested in a Checking Account, Savings Account, or Credit Card, I'll guide you through the process step by step.\n\nWhat type of account would you like to open today?",
+    text: "Welcome to AccuEntry! I'm here to help you open a new account. Whether you're interested in a Checking Account, Savings Account, or Credit Card, I'll guide you through the process step by step.\n\nWhat type of account would you like to open today?",
 };
 
 
@@ -86,7 +86,7 @@ export default function ChatWindow() {
                             >
                                 {!isUser && (
                                     <div className="flex items-center gap-2 mb-1.5">
-                                        <span className="text-sm font-bold tracking-wide text-citi-blue">Citi Assistant</span>
+                                        <span className="text-sm font-bold tracking-wide text-citi-blue">AccuEntry Assistant</span>
                                     </div>
                                 )}
                                 {message.text}

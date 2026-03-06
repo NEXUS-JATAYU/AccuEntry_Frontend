@@ -5,7 +5,7 @@ import Icon from '../common/Icon';
 const MOCK_START_MESSAGE = {
     id: 'welcome',
     role: 'assistant',
-    text: "Welcome to our account opening and onboarding process! I'm here to help you open a new Citi account.\n\nHow would you like to proceed?",
+    text: "Welcome to our account opening and onboarding process! I'm here to help you open a new account.\n\nHow would you like to proceed?",
 };
 
 export default function ChatBotWidget({ mode, onMinimize, onClose }) {
@@ -59,7 +59,7 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                             <Icon name="chat" className="w-4 h-4" />
                         </div>
                         <div>
-                            <p className="text-sm font-bold leading-tight tracking-wide">Citi Assistant</p>
+                            <p className="text-sm font-bold leading-tight tracking-wide">AccuEntry Assistant</p>
                             <p className="text-[10px] text-white/70 font-medium">Account Opening</p>
                         </div>
                     </div>

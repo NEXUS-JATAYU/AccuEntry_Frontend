@@ -20,7 +20,7 @@ export default function Header({ onOpenAccount }) {
                 <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-10">
                     <div className="flex items-center gap-4 py-1">
                         <Link to="/" className="text-2xl font-bold text-citi-blue tracking-tight hover:opacity-90">
-                            citi
+                            nexus
                         </Link>
                         <div className="hidden md:flex items-center gap-2 text-xs text-gray-700">
                             <span className="font-bold">FDIC</span>

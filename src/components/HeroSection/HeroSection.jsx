@@ -19,10 +19,10 @@ export default function HeroSection({ chatState, onMinimize, onClose }) {
                         {/* Text */}
                         <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-3 drop-shadow-sm">
-                                Citi® Credit Cards
+                                Nexus® Credit Cards
                             </p>
                             <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-5 drop-shadow-sm text-balance">
-                                Choose the right Citi® credit card for you
+                                Choose the right Nexus® credit card for you
                             </h1>
                             <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8 max-w-xl">
                                 Whether you want Cash Back, a Low Intro Rate, Rewards for Costco Members, or Great Airline Miles, the choice is all yours.
@@ -36,25 +36,25 @@ export default function HeroSection({ chatState, onMinimize, onClose }) {
                         <div className="grid grid-cols-2 gap-3 w-full max-w-[260px] sm:max-w-[240px] shrink-0">
                             <div className="bg-gradient-to-br from-citi-blue to-blue-700 rounded-xl h-24 sm:h-28 flex items-center justify-center text-white text-xs font-semibold shadow-lg transition-transform hover:-translate-y-1 cursor-pointer">
                                 <div className="text-center drop-shadow-md">
-                                    <div className="text-lg sm:text-xl font-bold">citi</div>
+                                    <div className="text-lg sm:text-xl font-bold">nexus</div>
                                     <div className="text-[10px] opacity-90 tracking-wider">Double Cash</div>
                                 </div>
                             </div>
                             <div className="bg-gradient-to-br from-gray-700 to-gray-900 rounded-xl h-24 sm:h-28 flex items-center justify-center text-white text-xs font-semibold shadow-lg transition-transform hover:-translate-y-1 cursor-pointer">
                                 <div className="text-center drop-shadow-md">
-                                    <div className="text-lg sm:text-xl font-bold">citi</div>
+                                    <div className="text-lg sm:text-xl font-bold">nexus</div>
                                     <div className="text-[10px] opacity-90 tracking-wider">Premier</div>
                                 </div>
                             </div>
                             <div className="bg-gradient-to-br from-citi-dark-blue to-blue-900 rounded-xl h-24 sm:h-28 flex items-center justify-center text-white text-xs font-semibold shadow-lg transition-transform hover:-translate-y-1 cursor-pointer">
                                 <div className="text-center drop-shadow-md">
-                                    <div className="text-lg sm:text-xl font-bold">citi</div>
+                                    <div className="text-lg sm:text-xl font-bold">nexus</div>
                                     <div className="text-[10px] opacity-90 tracking-wider">Custom Cash</div>
                                 </div>
                             </div>
                             <div className="bg-gradient-to-br from-gray-500 to-gray-700 rounded-xl h-24 sm:h-28 flex items-center justify-center text-white text-xs font-semibold shadow-lg transition-transform hover:-translate-y-1 cursor-pointer">
                                 <div className="text-center drop-shadow-md">
-                                    <div className="text-lg sm:text-xl font-bold">citi</div>
+                                    <div className="text-lg sm:text-xl font-bold">nexus</div>
                                     <div className="text-[10px] opacity-90 tracking-wider">AAdvantage</div>
                                 </div>
                             </div>
