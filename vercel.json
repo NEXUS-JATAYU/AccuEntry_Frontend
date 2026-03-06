@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/accounts_frontend", "destination": "/index.html" }
   ]
 }
 
