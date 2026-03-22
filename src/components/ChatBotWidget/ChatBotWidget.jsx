@@ -12,14 +12,17 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([MOCK_START_MESSAGE]);
     const [isLoading, setIsLoading] = useState(false);
+    const [progress, setProgress] = useState(0);
+    const [sessionId] = useState(() => crypto.randomUUID());
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
+    const BACKEND_URL = import.meta.env.BACKEND_FASTAPI_URL || 'http://localhost:8000';
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, isLoading]);
 
-    const sendMessage = (text) => {
+    const sendMessage = async (text) => {
         if (!text.trim() || isLoading) return;
 
         const newMessages = [...messages, { id: Date.now().toString(), role: 'user', text }];
@@ -27,17 +30,35 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
         setInput('');
         setIsLoading(true);
 
-        setTimeout(() => {
+        try {
+            const response = await fetch(`${BACKEND_URL}/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ session_id: sessionId, user_input: text })
+            });
+
+            const data = await response.json();
+
             setMessages((prev) => [
                 ...prev,
                 {
                     id: (Date.now() + 1).toString(),
                     role: 'assistant',
-                    text: `Got it! You said: "${text}". Please visit the full open account page to complete this process.`,
+                    text: data.message,
                 },
             ]);
+
+            if (data.progress !== undefined) setProgress(data.progress);
+
+        } catch (error) {
+            console.error("Chat error:", error);
+            setMessages((prev) => [
+                ...prev,
+                { id: (Date.now() + 1).toString(), role: 'assistant', text: "Sorry, I am having trouble connecting to the server. Please check your connection." },
+            ]);
+        } finally {
             setIsLoading(false);
-        }, 1500);
+        }
     };
 
     const handleSubmit = (e) => {
@@ -73,6 +94,17 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                         <button onClick={onClose} className="w-7 h-7 rounded hover:bg-white/10 flex items-center justify-center transition-colors text-white/80 hover:text-white" title="Close">
                             <Icon name="close" className="w-4 h-4" />
                         </button>
+                    </div>
+                </div>
+
+                {/* Progress Bar Area */}
+                <div className="bg-white border-b border-gray-200 px-4 py-2 flex flex-col gap-1.5 shrink-0">
+                    <div className="flex justify-between items-center text-[11px] font-semibold text-citi-dark-blue">
+                        <span>{progress < 100 ? 'Detail Capture' : 'Identity Verification'}</span>
+                        <span>{progress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                        <div className="bg-citi-blue h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
                     </div>
                 </div>
 
@@ -165,6 +197,17 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                     <button onClick={onClose} className="w-8 h-8 rounded hover:bg-white/10 flex items-center justify-center transition-colors text-white/80 hover:text-white" title="Close">
                         <Icon name="close" className="w-4 h-4" />
                     </button>
+                </div>
+            </div>
+
+            {/* Progress Bar Area */}
+            <div className="bg-white border-b border-gray-200 px-5 py-3 flex flex-col gap-1.5 shrink-0">
+                <div className="flex justify-between items-center text-xs font-semibold text-citi-dark-blue">
+                    <span>{progress < 100 ? 'Detail Capture' : 'Identity Verification'}</span>
+                    <span>{progress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-citi-blue h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
                 </div>
             </div>
 

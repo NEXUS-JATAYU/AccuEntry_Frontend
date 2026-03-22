@@ -10,7 +10,7 @@ export default function OpenAccountPage() {
                 <div className="max-w-7xl mx-auto px-4 flex items-center justify-between" style={{ height: '3.5rem' }}>
                     <div className="flex items-center gap-3 sm:gap-4 h-full">
                         <Link to="/" className="text-2xl font-bold tracking-tight hover-opacity transition-opacity">
-                            citi
+                            nexus
                         </Link>
                         <div className="hidden sm:block" style={{ height: '1.5rem', width: '1px', backgroundColor: 'rgba(255,255,255,0.3)' }} />
                         <div className="hidden sm:block">

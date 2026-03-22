@@ -11,9 +11,10 @@ export default function ChatWindow() {
     const [input, setInput] = useState('');
     const [messages, setMessages] = useState([MOCK_START_MESSAGE]);
     const [isLoading, setIsLoading] = useState(false);
+    const [progress, setProgress] = useState(0);
     const messagesEndRef = useRef(null);
     const [sessionId] = useState(() => crypto.randomUUID());
-    const BACKEND_URL = import.meta.env.BACKEND_FASTAPI_URL;
+    const BACKEND_URL = import.meta.env.BACKEND_FASTAPI_URL || 'http://localhost:8000';
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -28,7 +29,7 @@ export default function ChatWindow() {
     setIsLoading(true);
 
     try {
-        const response = await fetch('http://localhost:8000/chat', {
+        const response = await fetch(`${BACKEND_URL}/chat`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -49,6 +50,10 @@ export default function ChatWindow() {
                 text: data.message
             }
         ]);
+        
+        if (data.progress !== undefined) {
+            setProgress(data.progress);
+        }
 
     } catch (error) {
         console.error("Chat error:", error);
@@ -63,6 +68,17 @@ export default function ChatWindow() {
 
     return (
         <div className="flex flex-col h-[calc(100vh-120px)] max-w-4xl mx-auto bg-gray-50 shadow-inner">
+            {/* Progress Bar Area */}
+            <div className="bg-white border-b border-gray-200 px-6 py-4 flex flex-col gap-2 shrink-0">
+                <div className="flex justify-between items-center text-sm font-semibold text-citi-dark-blue">
+                    <span>{progress < 100 ? 'Step 1: Detail Capture' : 'Step 2: Identity Verification'}</span>
+                    <span>{progress}% Completed</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div className="bg-citi-blue h-2.5 rounded-full transition-all duration-500 ease-in-out" style={{ width: `${progress}%` }}></div>
+                </div>
+            </div>
+
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 flex flex-col gap-6">
                 {messages.map((message) => {
