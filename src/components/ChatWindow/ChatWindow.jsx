@@ -160,6 +160,43 @@ export default function ChatWindow() {
     } catch {
       setDocStatus((prev) => ({ ...prev, [field]: "failed" }));
     }
+
+    // After selfie is uploaded, immediately trigger a backend `/chat` turn
+    // so the supervisor can poll verification status and advance progress.
+    if (field === "selfie") {
+      setIsLoading(true);
+      try {
+        const resp = await fetch(`${BACKEND_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            user_input: "",
+          }),
+        });
+        const data = await resp.json();
+        if (data?.message) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: (Date.now() + 1).toString(),
+              role: "assistant",
+              text: data.message,
+            },
+          ]);
+        }
+        if (data.progress !== undefined) setProgress(data.progress);
+        if (data.step !== undefined) setCurrentStep(data.step);
+        if (data.stage) setStage(data.stage);
+        if (data.requires_upload !== undefined) {
+          setRequiresUpload(data.requires_upload);
+        }
+      } catch (err) {
+        console.error("Post-selfie chat poll error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
   const sendMessage = async (text) => {
