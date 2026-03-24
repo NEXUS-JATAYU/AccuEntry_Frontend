@@ -18,6 +18,13 @@ const stageLabels = {
   rejected: "Application rejected",
 };
 
+const AML_CHECKS = [
+  { key: "sanctions", label: "Sanctions list" },
+  { key: "rbi", label: "RBI caution list" },
+  { key: "pep", label: "PEP screening" },
+  { key: "rules", label: "Risk rules" },
+];
+
 const MOCK_START_MESSAGE = {
   id: "welcome",
   role: "assistant",
@@ -25,7 +32,7 @@ const MOCK_START_MESSAGE = {
 };
 
 // ─── Step Tracker Component ───────────────────────────────────
-function StepTracker({ currentStep, progress, barLabel, amlStatus, amlInBackground }) {
+function StepTracker({ currentStep, progress, barLabel, amlStatus, amlInBackground, amlChecks }) {
   const normalizedAml = amlInBackground ? "checking" : (amlStatus || "pending");
 
   const amlBadge = {
@@ -141,6 +148,35 @@ function StepTracker({ currentStep, progress, barLabel, amlStatus, amlInBackgrou
             {amlBadge.label}
           </span>
         </div>
+        {(amlInBackground || amlStatus === "clear" || amlStatus === "flagged") && (
+          <div className="mt-3 grid gap-2">
+            {AML_CHECKS.map((item) => {
+              const status = amlChecks[item.key] || "idle";
+              return (
+                <div key={item.key} className="flex items-center justify-between text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                  <span className="font-medium text-gray-700">{item.label}</span>
+                  <span className="inline-flex items-center gap-2">
+                    {status === "checking" && (
+                      <span className="inline-flex items-center gap-2 text-amber-700 font-semibold">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        Checking
+                      </span>
+                    )}
+                    {status === "done" && (
+                      <span className="inline-flex items-center gap-2 text-green-700 font-semibold">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Done
+                      </span>
+                    )}
+                    {status === "idle" && <span className="text-gray-500">Queued</span>}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -162,6 +198,14 @@ export default function ChatWindow() {
   });
   const [amlStatus, setAmlStatus] = useState("pending");
   const [amlInBackground, setAmlInBackground] = useState(false);
+  const [amlChecks, setAmlChecks] = useState({
+    sanctions: "idle",
+    rbi: "idle",
+    pep: "idle",
+    rules: "idle",
+  });
+  const amlTimelineRef = useRef(null);
+  const prevAmlRef = useRef({ amlInBackground: false, amlStatus: "pending" });
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -172,10 +216,105 @@ export default function ChatWindow() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    if (!amlInBackground) {
+      if (amlStatus === "clear" || amlStatus === "flagged") {
+        setAmlChecks({
+          sanctions: "done",
+          rbi: "done",
+          pep: "done",
+          rules: "done",
+        });
+      }
+      if (amlTimelineRef.current) {
+        clearInterval(amlTimelineRef.current);
+        amlTimelineRef.current = null;
+      }
+      return undefined;
+    }
+
+    const keys = AML_CHECKS.map((c) => c.key);
+    let idx = 0;
+
+    setAmlChecks({ sanctions: "checking", rbi: "idle", pep: "idle", rules: "idle" });
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${Date.now()}-aml-start`,
+        role: "assistant",
+        text: "AML started: checking sanctions list...",
+      },
+    ]);
+
+    amlTimelineRef.current = setInterval(() => {
+      setAmlChecks((prev) => {
+        const next = { ...prev };
+        const currentKey = keys[idx];
+        if (currentKey) next[currentKey] = "done";
+        idx += 1;
+        const nextKey = keys[idx];
+        if (nextKey) next[nextKey] = "checking";
+        return next;
+      });
+
+      if (idx < keys.length) {
+        const label = AML_CHECKS[idx].label.toLowerCase();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-aml-${idx}`,
+            role: "assistant",
+            text: `AML update: checking ${label}...`,
+          },
+        ]);
+      }
+
+      if (idx >= keys.length) {
+        clearInterval(amlTimelineRef.current);
+        amlTimelineRef.current = null;
+      }
+    }, 1800);
+
+    return () => {
+      if (amlTimelineRef.current) {
+        clearInterval(amlTimelineRef.current);
+        amlTimelineRef.current = null;
+      }
+    };
+  }, [amlInBackground, amlStatus]);
+
+  useEffect(() => {
+    const prev = prevAmlRef.current;
+    if (prev.amlInBackground && !amlInBackground) {
+      if (amlStatus === "clear") {
+        setMessages((old) => [
+          ...old,
+          {
+            id: `${Date.now()}-aml-clear`,
+            role: "assistant",
+            text: "AML screening complete: all checks cleared.",
+          },
+        ]);
+      }
+      if (amlStatus === "flagged") {
+        setMessages((old) => [
+          ...old,
+          {
+            id: `${Date.now()}-aml-flagged`,
+            role: "assistant",
+            text: "AML screening complete: application flagged for compliance review.",
+          },
+        ]);
+      }
+    }
+    prevAmlRef.current = { amlInBackground, amlStatus };
+  }, [amlInBackground, amlStatus]);
+
   const applyBackendState = (data, options = {}) => {
     const { appendAssistantMessage = true } = options;
 
-    if (appendAssistantMessage && data?.message) {
+    const holdForAml = Boolean(data?.aml_in_background) && data?.stage === "complete";
+    if (appendAssistantMessage && data?.message && !holdForAml) {
       setMessages((prev) => [
         ...prev,
         {
@@ -185,8 +324,6 @@ export default function ChatWindow() {
         },
       ]);
     }
-    if (data?.progress !== undefined) setProgress(data.progress);
-    if (data?.step !== undefined) setCurrentStep(data.step);
     if (data?.stage) setStage(data.stage);
     if (data?.requires_upload !== undefined) setRequiresUpload(data.requires_upload);
     if (data?.aml_status !== undefined && data?.aml_status !== null) {
@@ -195,6 +332,19 @@ export default function ChatWindow() {
     if (data?.aml_in_background !== undefined) {
       setAmlInBackground(Boolean(data.aml_in_background));
     }
+
+    const inBg = data?.aml_in_background !== undefined ? Boolean(data.aml_in_background) : amlInBackground;
+    if (inBg) {
+      setProgress((prev) => {
+        const incoming = data?.progress !== undefined ? data.progress : prev;
+        return Math.max(65, Math.min(incoming, 80));
+      });
+      setCurrentStep(3);
+      return;
+    }
+
+    if (data?.progress !== undefined) setProgress(data.progress);
+    if (data?.step !== undefined) setCurrentStep(data.step);
   };
 
   useEffect(() => {
@@ -362,9 +512,10 @@ export default function ChatWindow() {
       <StepTracker
         currentStep={currentStep}
         progress={progress}
-        barLabel={stageLabels[stage] ?? stageLabels.data_capture}
+        barLabel={amlInBackground ? stageLabels.aml_screening : (stageLabels[stage] ?? stageLabels.data_capture)}
         amlStatus={amlStatus}
         amlInBackground={amlInBackground}
+        amlChecks={amlChecks}
       />
 
       {/* Messages Area */}
