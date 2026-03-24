@@ -6,17 +6,26 @@ const ONBOARDING_STEPS = [
   { step: 2, name: "Identity Verification", icon: "🪪" },
   { step: 3, name: "AML Screening", icon: "🔍" },
   { step: 4, name: "Fraud Check", icon: "🛡️" },
+  { step: 5, name: "Account Activation", icon: "✅" },
 ];
 
 const stageLabels = {
   data_capture: "Step 1: Detail capture",
   doc_verification: "Step 2: Document verification",
   kyc_approval: "Step 3: KYC review",
-  aml_screening: "Step 4: AML screening",
-  fraud_check: "Step 5: Fraud check",
-  complete: "Complete — account approved",
+  aml_screening: "Step 3: AML screening",
+  fraud_check: "Step 4: Fraud check",
+  manual_review: "Step 4: Manual review",
+  complete: "Step 5: Account activated",
   rejected: "Application rejected",
 };
+
+const FRAUD_LAYERS = [
+  "Rule checks",
+  "Behavioural signals",
+  "Identity cross-match",
+  "Risk reasoning",
+];
 
 const AML_CHECKS = [
   { key: "sanctions", label: "Sanctions list" },
@@ -25,6 +34,75 @@ const AML_CHECKS = [
   { key: "rules", label: "Risk rules" },
 ];
 
+const splitFraudSignal = (signal) => {
+  const raw = String(signal || "").trim();
+  const idx = raw.indexOf(":");
+  if (idx === -1) return { key: raw, value: "" };
+  return { key: raw.slice(0, idx), value: raw.slice(idx + 1) };
+};
+
+const prettifyKey = (value) =>
+  String(value || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+const formatFraudSignalLabel = (signal) => {
+  const { key, value } = splitFraudSignal(signal);
+  const show = (label) => (value ? `${label} (${value})` : label);
+
+  switch (key) {
+    case "missing_email": return "Missing email";
+    case "invalid_email_format": return show("Invalid email format");
+    case "disposable_email_domain": return show("Disposable email domain");
+    case "missing_phone": return "Missing phone number";
+    case "invalid_phone_number": return show("Invalid phone number");
+    case "unparseable_phone": return "Unparseable phone";
+    case "risky_phone_type": return show("Risky phone type");
+    case "ip_blocklisted": return show("IP blocklisted");
+    case "ip_private_range": return "Private range IP";
+    case "high_velocity_ip": return show("High IP velocity");
+    case "moderate_velocity_ip": return show("Moderate IP velocity");
+    case "device_flag": return show("Device risk flag");
+    case "suspiciously_fast_form_fill": return show("Unusually fast form fill");
+    case "low_keystroke_entropy": return show("Low keystroke entropy");
+    case "name_low_similarity": return show("Low name similarity");
+    case "name_partial_similarity": return show("Partial name similarity");
+    case "dob_mismatch_vs_document": return "DOB mismatch against document";
+    case "dob_unparseable": return "DOB parsing issue";
+    case "address_low_overlap": return show("Low address overlap");
+    default: return value ? `${prettifyKey(key)} (${value})` : prettifyKey(key);
+  }
+};
+
+const formatFraudSignalChatDetail = (signal) => {
+  const { key, value } = splitFraudSignal(signal);
+
+  switch (key) {
+    case "missing_email": return "Email field was missing.";
+    case "invalid_email_format": return `Email format validation failed${value ? ` (${value})` : ""}.`;
+    case "disposable_email_domain": return `Disposable email domain detected${value ? ` (${value})` : ""}.`;
+    case "missing_phone": return "Phone number field was missing.";
+    case "invalid_phone_number": return `Phone number validation failed${value ? ` (${value})` : ""}.`;
+    case "unparseable_phone": return "Phone number could not be parsed reliably.";
+    case "risky_phone_type": return `Phone type is marked risky${value ? ` (${value})` : ""}.`;
+    case "ip_blocklisted": return `Network IP is listed in a blocklist${value ? ` (${value})` : ""}.`;
+    case "ip_private_range": return "Network IP belongs to a private range.";
+    case "high_velocity_ip": return `High sign-up velocity detected for this IP${value ? ` (${value})` : ""}.`;
+    case "moderate_velocity_ip": return `Moderate sign-up velocity detected for this IP${value ? ` (${value})` : ""}.`;
+    case "device_flag": return `Device fingerprint raised a risk flag${value ? ` (${value})` : ""}.`;
+    case "suspiciously_fast_form_fill": return `Form completion speed looked suspiciously fast${value ? ` (${value})` : ""}.`;
+    case "low_keystroke_entropy": return `Typing pattern entropy is lower than expected${value ? ` (${value})` : ""}.`;
+    case "name_low_similarity": return `Name similarity against documents is low${value ? ` (${value})` : ""}.`;
+    case "name_partial_similarity": return `Name similarity is partial${value ? ` (${value})` : ""}.`;
+    case "dob_mismatch_vs_document": return "Date of birth does not match document data.";
+    case "dob_unparseable": return "Date of birth could not be parsed reliably.";
+    case "address_low_overlap": return `Address overlap against supporting data is low${value ? ` (${value})` : ""}.`;
+    default: return `${formatFraudSignalLabel(signal)} was flagged.`;
+  }
+};
+
 const MOCK_START_MESSAGE = {
   id: "welcome",
   role: "assistant",
@@ -32,7 +110,7 @@ const MOCK_START_MESSAGE = {
 };
 
 // ─── Step Tracker Component ───────────────────────────────────
-function StepTracker({ currentStep, progress, barLabel, amlStatus, amlInBackground, amlChecks }) {
+function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInBackground, amlChecks, fraudStatus, fraudRiskScore, fraudSignals }) {
   const normalizedAml = amlInBackground ? "checking" : (amlStatus || "pending");
 
   const amlBadge = {
@@ -177,6 +255,47 @@ function StepTracker({ currentStep, progress, barLabel, amlStatus, amlInBackgrou
             })}
           </div>
         )}
+
+        {(stage === "fraud_check" || stage === "manual_review" || stage === "complete" || fraudStatus) && (
+          <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="font-semibold text-citi-dark-blue">Fraud Check Pipeline</span>
+              <span className="text-gray-600">
+                {fraudStatus ? `Status: ${fraudStatus}` : "Status: running"}
+                {fraudRiskScore !== null && fraudRiskScore !== undefined ? ` | Risk ${fraudRiskScore}` : ""}
+              </span>
+            </div>
+            <div className="grid gap-2">
+              {FRAUD_LAYERS.map((label) => (
+                <div key={label} className="flex items-center justify-between text-xs bg-white border border-gray-200 rounded-md px-3 py-2">
+                  <span className="font-medium text-gray-700">{label}</span>
+                  {(stage === "fraud_check" && !fraudStatus) ? (
+                    <span className="inline-flex items-center gap-2 text-amber-700 font-semibold">
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      Checking
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2 text-green-700 font-semibold">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Done
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {Array.isArray(fraudSignals) && fraudSignals.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {fraudSignals.slice(0, 3).map((signal) => (
+                  <span key={signal} className="inline-flex items-center rounded-full bg-white border border-gray-300 px-2.5 py-1 text-[11px] text-gray-700">
+                    {formatFraudSignalLabel(signal)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -198,6 +317,10 @@ export default function ChatWindow() {
   });
   const [amlStatus, setAmlStatus] = useState("pending");
   const [amlInBackground, setAmlInBackground] = useState(false);
+  const [fraudStatus, setFraudStatus] = useState(null);
+  const [fraudRiskScore, setFraudRiskScore] = useState(null);
+  const [fraudSignals, setFraudSignals] = useState([]);
+  const [fraudReasoning, setFraudReasoning] = useState(null);
   const [amlChecks, setAmlChecks] = useState({
     sanctions: "idle",
     rbi: "idle",
@@ -206,6 +329,9 @@ export default function ChatWindow() {
   });
   const amlTimelineRef = useRef(null);
   const prevAmlRef = useRef({ amlInBackground: false, amlStatus: "pending" });
+  const fraudPromptRef = useRef({ announced: false, introShown: false, seenSignals: new Set() });
+  const fraudReasoningRef = useRef("");
+  const fraudIntroTimersRef = useRef([]);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -284,6 +410,69 @@ export default function ChatWindow() {
   }, [amlInBackground, amlStatus]);
 
   useEffect(() => {
+    if (stage !== "fraud_check") {
+      fraudIntroTimersRef.current.forEach((t) => clearTimeout(t));
+      fraudIntroTimersRef.current = [];
+      fraudPromptRef.current = { announced: false, introShown: false, seenSignals: new Set() };
+      fraudReasoningRef.current = "";
+      return;
+    }
+
+    if (!fraudPromptRef.current.announced && !fraudPromptRef.current.introShown) {
+      const staged = [
+        "Fraud screening started. We are now checking network and IP reputation.",
+        "We are validating email and phone authenticity.",
+        "We are evaluating device and behavior anomalies.",
+        "We are cross-checking identity consistency across captured data.",
+      ];
+
+      staged.forEach((line, idx) => {
+        const timer = setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `${Date.now()}-fraud-stage-${idx}`,
+              role: "assistant",
+              text: line,
+            },
+          ]);
+        }, idx * 900);
+        fraudIntroTimersRef.current.push(timer);
+      });
+
+      fraudPromptRef.current.introShown = true;
+      fraudPromptRef.current.announced = true;
+    }
+
+    const seen = fraudPromptRef.current.seenSignals;
+    const incoming = Array.isArray(fraudSignals) ? fraudSignals : [];
+    incoming.forEach((signal) => {
+      if (seen.has(signal)) return;
+      seen.add(signal);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-fraud-signal-${signal}`,
+          role: "assistant",
+          text: `Fraud check update: ${formatFraudSignalChatDetail(signal)}`,
+        },
+      ]);
+    });
+
+    if (fraudReasoning && fraudReasoning !== fraudReasoningRef.current) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-fraud-insight`,
+          role: "assistant",
+          text: `Fraud model insight: ${fraudReasoning}`,
+        },
+      ]);
+      fraudReasoningRef.current = fraudReasoning;
+    }
+  }, [stage, fraudSignals, fraudRiskScore, fraudStatus, fraudReasoning]);
+
+  useEffect(() => {
     const prev = prevAmlRef.current;
     if (prev.amlInBackground && !amlInBackground) {
       if (amlStatus === "clear") {
@@ -332,6 +521,18 @@ export default function ChatWindow() {
     if (data?.aml_in_background !== undefined) {
       setAmlInBackground(Boolean(data.aml_in_background));
     }
+    if (data?.fraud_status !== undefined) {
+      setFraudStatus(data.fraud_status);
+    }
+    if (data?.fraud_risk_score !== undefined) {
+      setFraudRiskScore(data.fraud_risk_score);
+    }
+    if (Array.isArray(data?.fraud_signals)) {
+      setFraudSignals(data.fraud_signals);
+    }
+    if (data?.fraud_reasoning !== undefined) {
+      setFraudReasoning(data.fraud_reasoning);
+    }
 
     const inBg = data?.aml_in_background !== undefined ? Boolean(data.aml_in_background) : amlInBackground;
     if (inBg) {
@@ -370,6 +571,30 @@ export default function ChatWindow() {
     const timer = setInterval(poll, 4000);
     return () => clearInterval(timer);
   }, [amlInBackground, BACKEND_URL, sessionId]);
+
+  useEffect(() => {
+    if (stage !== "fraud_check" || progress >= 100) return undefined;
+
+    const poll = async () => {
+      try {
+        const resp = await fetch(`${BACKEND_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            user_input: "",
+          }),
+        });
+        const data = await resp.json();
+        applyBackendState(data, { appendAssistantMessage: false });
+      } catch (err) {
+        console.error("Fraud status poll error:", err);
+      }
+    };
+
+    const timer = setInterval(poll, 3000);
+    return () => clearInterval(timer);
+  }, [stage, progress, BACKEND_URL, sessionId]);
 
   const uploadDoc = async (field, endpoint, file) => {
     if (!file) return;
@@ -513,9 +738,13 @@ export default function ChatWindow() {
         currentStep={currentStep}
         progress={progress}
         barLabel={amlInBackground ? stageLabels.aml_screening : (stageLabels[stage] ?? stageLabels.data_capture)}
+        stage={stage}
         amlStatus={amlStatus}
         amlInBackground={amlInBackground}
         amlChecks={amlChecks}
+        fraudStatus={fraudStatus}
+        fraudRiskScore={fraudRiskScore}
+        fraudSignals={fraudSignals}
       />
 
       {/* Messages Area */}
