@@ -25,7 +25,31 @@ const MOCK_START_MESSAGE = {
 };
 
 // ─── Step Tracker Component ───────────────────────────────────
-function StepTracker({ currentStep, progress, barLabel }) {
+function StepTracker({ currentStep, progress, barLabel, amlStatus, amlInBackground }) {
+  const normalizedAml = amlInBackground ? "checking" : (amlStatus || "pending");
+
+  const amlBadge = {
+    checking: {
+      label: "AML: Checking",
+      className: "bg-amber-100 text-amber-700 border border-amber-200",
+    },
+    clear: {
+      label: "AML: Clear",
+      className: "bg-green-100 text-green-700 border border-green-200",
+    },
+    flagged: {
+      label: "AML: Flagged",
+      className: "bg-red-100 text-red-700 border border-red-200",
+    },
+    pending: {
+      label: "AML: Pending",
+      className: "bg-gray-100 text-gray-600 border border-gray-200",
+    },
+  }[normalizedAml] || {
+    label: "AML: Pending",
+    className: "bg-gray-100 text-gray-600 border border-gray-200",
+  };
+
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-5 shrink-0">
       {/* Step Circles */}
@@ -112,6 +136,11 @@ function StepTracker({ currentStep, progress, barLabel }) {
             }}
           />
         </div>
+        <div className="mt-3 flex justify-end">
+          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${amlBadge.className}`}>
+            {amlBadge.label}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -131,6 +160,8 @@ export default function ChatWindow() {
     aadhaar: null,
     selfie: null,
   });
+  const [amlStatus, setAmlStatus] = useState("pending");
+  const [amlInBackground, setAmlInBackground] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const [sessionId] = useState(() => crypto.randomUUID());
@@ -140,6 +171,55 @@ export default function ChatWindow() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  const applyBackendState = (data, options = {}) => {
+    const { appendAssistantMessage = true } = options;
+
+    if (appendAssistantMessage && data?.message) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          text: data.message,
+        },
+      ]);
+    }
+    if (data?.progress !== undefined) setProgress(data.progress);
+    if (data?.step !== undefined) setCurrentStep(data.step);
+    if (data?.stage) setStage(data.stage);
+    if (data?.requires_upload !== undefined) setRequiresUpload(data.requires_upload);
+    if (data?.aml_status !== undefined && data?.aml_status !== null) {
+      setAmlStatus(data.aml_status);
+    }
+    if (data?.aml_in_background !== undefined) {
+      setAmlInBackground(Boolean(data.aml_in_background));
+    }
+  };
+
+  useEffect(() => {
+    if (!amlInBackground) return undefined;
+
+    const poll = async () => {
+      try {
+        const resp = await fetch(`${BACKEND_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            user_input: "",
+          }),
+        });
+        const data = await resp.json();
+        applyBackendState(data, { appendAssistantMessage: false });
+      } catch (err) {
+        console.error("AML status poll error:", err);
+      }
+    };
+
+    const timer = setInterval(poll, 4000);
+    return () => clearInterval(timer);
+  }, [amlInBackground, BACKEND_URL, sessionId]);
 
   const uploadDoc = async (field, endpoint, file) => {
     if (!file) return;
@@ -175,22 +255,7 @@ export default function ChatWindow() {
           }),
         });
         const data = await resp.json();
-        if (data?.message) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: (Date.now() + 1).toString(),
-              role: "assistant",
-              text: data.message,
-            },
-          ]);
-        }
-        if (data.progress !== undefined) setProgress(data.progress);
-        if (data.step !== undefined) setCurrentStep(data.step);
-        if (data.stage) setStage(data.stage);
-        if (data.requires_upload !== undefined) {
-          setRequiresUpload(data.requires_upload);
-        }
+        applyBackendState(data, { appendAssistantMessage: true });
       } catch (err) {
         console.error("Post-selfie chat poll error:", err);
       } finally {
@@ -224,27 +289,7 @@ export default function ChatWindow() {
 
       const data = await response.json();
       console.log("API RESPONSE:", data);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          text: data.message,
-        },
-      ]);
-
-      if (data.progress !== undefined) {
-        setProgress(data.progress);
-      }
-      if (data.step !== undefined) {
-        setCurrentStep(data.step);
-      }
-      if (data.stage) {
-        setStage(data.stage);
-      }
-      if (data.requires_upload !== undefined) {
-        setRequiresUpload(data.requires_upload);
-      }
+      applyBackendState(data, { appendAssistantMessage: true });
     } catch (error) {
       console.error("Chat error:", error);
     }
@@ -318,6 +363,8 @@ export default function ChatWindow() {
         currentStep={currentStep}
         progress={progress}
         barLabel={stageLabels[stage] ?? stageLabels.data_capture}
+        amlStatus={amlStatus}
+        amlInBackground={amlInBackground}
       />
 
       {/* Messages Area */}
