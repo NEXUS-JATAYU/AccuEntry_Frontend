@@ -106,7 +106,7 @@ const formatFraudSignalChatDetail = (signal) => {
 const MOCK_START_MESSAGE = {
   id: "welcome",
   role: "assistant",
-  text: "Welcome to AccuEntry! I'm here to help you open a new account. Whether you're interested in a Checking Account, Savings Account, or Credit Card, I'll guide you through the process step by step.\n\nWhat type of account would you like to open today?",
+  text: "Welcome to AccuEntry! I will guide you through the process step by step.\n\nHere are common account types and why people choose them:\n- Savings Account: for everyday saving and earning interest.\n- Current Account: for frequent transactions, usually for business use.\n- Fixed Deposit: for parking money for a fixed period to earn higher returns.\n- Recurring Deposit: for monthly saving discipline with fixed deposits over time.\n\nWhat type of account would you like to open today?",
 };
 
 // ─── Step Tracker Component ───────────────────────────────────
@@ -781,29 +781,6 @@ export default function ChatWindow() {
             </div>
           );
         })}
-
-        {messages.filter((m) => m.role === "user").length === 0 && (
-          <div className="flex flex-wrap gap-3 pl-14">
-            <button
-              onClick={() => sendMessage("I want to open a Checking Account")}
-              className="px-5 py-2.5 text-sm font-semibold border-2 border-citi-blue text-citi-blue rounded-full hover:bg-citi-light-blue transition-colors shadow-sm bg-white"
-            >
-              Checking Account
-            </button>
-            <button
-              onClick={() => sendMessage("I want to open a Savings Account")}
-              className="px-5 py-2.5 text-sm font-semibold border-2 border-citi-blue text-citi-blue rounded-full hover:bg-citi-light-blue transition-colors shadow-sm bg-white"
-            >
-              Savings Account
-            </button>
-            <button
-              onClick={() => sendMessage("I want to apply for a Credit Card")}
-              className="px-5 py-2.5 text-sm font-semibold border-2 border-citi-blue text-citi-blue rounded-full hover:bg-citi-light-blue transition-colors shadow-sm bg-white"
-            >
-              Credit Card
-            </button>
-          </div>
-        )}
 
         {isLoading && (
           <div className="flex justify-start">
