@@ -15,7 +15,10 @@ const stageLabels = {
   kyc_approval: "Step 3: KYC review",
   aml_screening: "Step 3: AML screening",
   fraud_check: "Step 4: Fraud check",
-  manual_review: "Step 4: Manual review",
+  manual_review: "Step 5: Manual review",
+  pending_docs: "Step 5: Pending documents",
+  escalated: "Step 5: Compliance escalation",
+  otp_verification: "Step 5: Account activation",
   complete: "Step 5: Account activated",
   rejected: "Application rejected",
 };
@@ -256,7 +259,7 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
           </div>
         )}
 
-        {(stage === "fraud_check" || stage === "manual_review" || stage === "complete" || fraudStatus) && (
+        {(stage === "fraud_check" || stage === "manual_review" || stage === "pending_docs" || stage === "escalated" || stage === "complete" || fraudStatus) && (
           <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
             <div className="flex items-center justify-between text-xs mb-2">
               <span className="font-semibold text-citi-dark-blue">Fraud Check Pipeline</span>
@@ -321,6 +324,9 @@ export default function ChatWindow() {
   const [fraudRiskScore, setFraudRiskScore] = useState(null);
   const [fraudSignals, setFraudSignals] = useState([]);
   const [fraudReasoning, setFraudReasoning] = useState(null);
+  const [otpRequired, setOtpRequired] = useState(false);
+  const [otpDigits, setOtpDigits] = useState(["" , "", "", ""]);
+  const otpRefs = useRef([]);
   const [amlChecks, setAmlChecks] = useState({
     sanctions: "idle",
     rbi: "idle",
@@ -504,14 +510,20 @@ export default function ChatWindow() {
 
     const holdForAml = Boolean(data?.aml_in_background) && data?.stage === "complete";
     if (appendAssistantMessage && data?.message && !holdForAml) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          text: data.message,
-        },
-      ]);
+      setMessages((prev) => {
+        const lastMsg = prev.length > 0 ? prev[prev.length - 1] : null;
+        if (lastMsg && lastMsg.role === "assistant" && lastMsg.text === data.message) {
+          return prev;
+        }
+        return [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            text: data.message,
+          },
+        ];
+      });
     }
     if (data?.stage) setStage(data.stage);
     if (data?.requires_upload !== undefined) setRequiresUpload(data.requires_upload);
@@ -532,6 +544,9 @@ export default function ChatWindow() {
     }
     if (data?.fraud_reasoning !== undefined) {
       setFraudReasoning(data.fraud_reasoning);
+    }
+    if (data?.otp_required !== undefined) {
+      setOtpRequired(Boolean(data.otp_required));
     }
 
     const inBg = data?.aml_in_background !== undefined ? Boolean(data.aml_in_background) : amlInBackground;
@@ -562,7 +577,7 @@ export default function ChatWindow() {
           }),
         });
         const data = await resp.json();
-        applyBackendState(data, { appendAssistantMessage: false });
+        applyBackendState(data, { appendAssistantMessage: true });
       } catch (err) {
         console.error("AML status poll error:", err);
       }
@@ -586,7 +601,7 @@ export default function ChatWindow() {
           }),
         });
         const data = await resp.json();
-        applyBackendState(data, { appendAssistantMessage: false });
+        applyBackendState(data, { appendAssistantMessage: true });
       } catch (err) {
         console.error("Fraud status poll error:", err);
       }
@@ -758,7 +773,7 @@ export default function ChatWindow() {
               className={`flex ${isUser ? "justify-end" : "justify-start"}`}
             >
               {!isUser && (
-                <div className="w-10 h-10 rounded-full bg-citi-blue text-white flex items-center justify-center text-sm font-bold shrink-0 mr-3 mt-1 shadow-md">
+                <div className="w-11 h-11 rounded-full bg-citi-blue text-white flex items-center justify-center text-sm font-bold shrink-0 mr-3 mt-1 shadow-md">
                   C
                 </div>
               )}
@@ -776,7 +791,83 @@ export default function ChatWindow() {
                     </span>
                   </div>
                 )}
-                {message.text}
+                {(() => {
+                  try {
+                    const data = JSON.parse(message.text);
+                    if (data && data.type === "OTP_REQUESTED") {
+                      const { message: otpMsg } = data.payload;
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <p className="whitespace-pre-wrap">{otpMsg}</p>
+                          <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center">
+                            <p className="text-sm text-indigo-700 font-medium">
+                              📧 Check your email for the 4-digit code
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Code expires in 10 minutes
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (data && data.type === "ACCOUNT_ACTIVATED") {
+                      const { message: actMsg, account, activatedAt } = data.payload;
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <p className="whitespace-pre-wrap text-lg font-semibold">{actMsg}</p>
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-3 border-b border-green-200 pb-2">
+                              <span className="text-green-800 font-bold">Account Details</span>
+                              <span className="bg-green-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wide">
+                                ACTIVE
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-[110px_1fr] gap-y-2 text-[13px]">
+                              <div className="text-green-700 font-medium">Account ID:</div>
+                              <div className="font-mono text-gray-900">{account?.accountId}</div>
+                              <div className="text-green-700 font-medium">Name:</div>
+                              <div className="font-medium text-gray-900">{account?.accountHolderName}</div>
+                              <div className="text-green-700 font-medium">Account Type:</div>
+                              <div className="font-medium text-gray-900">{account?.accountType}</div>
+                              <div className="text-green-700 font-medium">Activated On:</div>
+                              <div className="font-medium text-gray-900">{activatedAt ? new Date(activatedAt).toLocaleString() : ""}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (data && data.type === "ACCOUNT_ACTIVATION_SUCCESS") {
+                      const { message: actMsg, account, nextSteps } = data.payload;
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <p>{actMsg}</p>
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
+                            <div className="flex items-center justify-between mb-3 border-b border-green-200 pb-2">
+                              <span className="text-green-800 font-bold">Account Details</span>
+                              <span className="bg-green-600 text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-full tracking-wide">
+                                {account.status}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-[110px_1fr] gap-y-2 text-[13px]">
+                              <div className="text-green-700 font-medium">Account ID:</div>
+                              <div className="font-mono text-gray-900">{account.accountId}</div>
+                              <div className="text-green-700 font-medium">Name:</div>
+                              <div className="font-medium text-gray-900">{account.accountHolderName}</div>
+                              <div className="text-green-700 font-medium">Account Type:</div>
+                              <div className="font-medium text-gray-900">{account.accountType}</div>
+                              <div className="text-green-700 font-medium">Features:</div>
+                              <div className="font-medium text-gray-900">{account.features?.join(", ")}</div>
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 whitespace-pre-wrap">{nextSteps}</p>
+                        </div>
+                      );
+                    }
+                  } catch (e) {
+                    // Not a structured message, render normally
+                  }
+                  return message.text;
+                })()}
               </div>
             </div>
           );
@@ -784,7 +875,7 @@ export default function ChatWindow() {
 
         {isLoading && (
           <div className="flex justify-start">
-            <div className="w-10 h-10 rounded-full bg-citi-blue text-white flex items-center justify-center text-sm font-bold shrink-0 mr-3 shadow-md">
+            <div className="w-11 h-11 rounded-full bg-citi-blue text-white flex items-center justify-center text-sm font-bold shrink-0 mr-3 shadow-md">
               C
             </div>
             <div className="bg-white border border-gray-100 px-5 py-4 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-1.5 h-[56px]">
@@ -809,7 +900,57 @@ export default function ChatWindow() {
 
       {/* Input Area */}
       <div className="bg-white border-t border-gray-200 px-4 sm:px-8 py-5 shrink-0 shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)]">
-        {!requiresUpload ? (
+        {otpRequired && !requiresUpload ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const code = otpDigits.join("");
+              if (code.length === 4) {
+                sendMessage(code);
+                setOtpDigits(["", "", "", ""]);
+              }
+            }}
+            className="flex flex-col items-center gap-4 w-full"
+          >
+            <p className="text-sm font-medium text-gray-700">Enter your 4-digit activation code</p>
+            <div className="flex gap-3">
+              {otpDigits.map((digit, idx) => (
+                <input
+                  key={idx}
+                  ref={(el) => { otpRefs.current[idx] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  aria-label={`OTP digit ${idx + 1}`}
+                  value={digit}
+                  disabled={isLoading}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/, "");
+                    setOtpDigits((prev) => {
+                      const next = [...prev];
+                      next[idx] = val;
+                      return next;
+                    });
+                    if (val && idx < 3) otpRefs.current[idx + 1]?.focus();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Backspace" && !digit && idx > 0) {
+                      otpRefs.current[idx - 1]?.focus();
+                    }
+                  }}
+                  className="w-14 h-16 text-center text-2xl font-bold border-2 border-gray-300 rounded-xl bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all shadow-sm"
+                />
+              ))}
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading || otpDigits.join("").length !== 4}
+              className="px-8 py-3.5 text-[15px] font-bold tracking-wide text-white bg-indigo-600 rounded-full transition-colors hover:bg-indigo-700 disabled:opacity-50 shadow-md hover:shadow-lg active:scale-[0.98]"
+            >
+              Verify & Activate
+            </button>
+          </form>
+        ) : !requiresUpload ? (
           <form onSubmit={handleSubmit} className="flex gap-3 w-full items-center">
             {/* File Upload Button (visible during identity verification) */}
             {currentStep === 2 && (
@@ -821,6 +962,7 @@ export default function ChatWindow() {
                   onChange={handleFileUpload}
                   className="hidden"
                   id="file-upload"
+                  aria-label="Upload document"
                 />
                 <button
                   type="button"
@@ -828,6 +970,7 @@ export default function ChatWindow() {
                   disabled={isLoading}
                   className="p-3 rounded-full bg-gray-100 hover:bg-citi-light-blue text-citi-blue transition-colors disabled:opacity-50 shrink-0"
                   title="Upload document (PDF, PNG, JPEG)"
+                  aria-label="Upload document button"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -841,6 +984,7 @@ export default function ChatWindow() {
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type your message..."
               disabled={isLoading}
+              aria-label="Chat input"
               className="flex-1 px-6 py-3.5 text-[15px] border-2 border-gray-200 rounded-full bg-gray-50 text-gray-900 focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20 focus:bg-white transition-all disabled:opacity-50 shadow-inner"
             />
             <button
@@ -881,6 +1025,7 @@ export default function ChatWindow() {
                     type="file"
                     accept="image/*"
                     disabled={disabled || isLoading}
+                    aria-label={`Upload ${label}`}
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (f) uploadDoc(key, endpoint, f);
