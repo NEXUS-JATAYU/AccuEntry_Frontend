@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 const ONBOARDING_STEPS = [
   { step: 1, name: "Detail Capture", icon: "📋" },
@@ -314,25 +314,32 @@ function LiveKycModal({ isOpen, onClose, sessionId, backendUrl, onComplete }) {
   const [errorMsg, setErrorMsg] = useState("");
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      startCamera();
-    } else {
-      stopCamera();
+  const stopCamera = useCallback(() => {
+    setStream((prev) => {
+      const active = prev || streamRef.current;
+      if (active) {
+        active.getTracks().forEach((track) => track.stop());
+      }
+      streamRef.current = null;
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      return null;
+    });
+  }, []);
+
+  const startCamera = useCallback(async () => {
+    if (streamRef.current) {
+      if (videoRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+      }
+      return;
     }
-  }, [isOpen]);
-
-  // Ensure stream stays bound to videoRef even after React re-renders or unmounts.
-  useEffect(() => {
-    if (videoRef.current && stream && !videoBlob) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream, videoBlob]);
-
-  const startCamera = async () => {
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      streamRef.current = s;
       setStream(s);
       if (videoRef.current) videoRef.current.srcObject = s;
       setErrorMsg("");
@@ -341,14 +348,33 @@ function LiveKycModal({ isOpen, onClose, sessionId, backendUrl, onComplete }) {
     } catch (err) {
       setErrorMsg("Camera access denied or unavailable.");
     }
-  };
+  }, []);
 
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
+  useEffect(() => {
+    let startTimer = null;
+    if (isOpen) {
+      startTimer = window.setTimeout(() => {
+        void startCamera();
+      }, 0);
+    } else {
+      startTimer = window.setTimeout(() => {
+        stopCamera();
+      }, 0);
     }
-  };
+
+    return () => {
+      if (startTimer !== null) {
+        window.clearTimeout(startTimer);
+      }
+    };
+  }, [isOpen, startCamera, stopCamera]);
+
+  // Ensure stream stays bound to videoRef even after React re-renders or unmounts.
+  useEffect(() => {
+    if (videoRef.current && stream && !videoBlob) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, videoBlob]);
 
   const startRecording = () => {
     if (!stream) return;
@@ -537,6 +563,8 @@ export default function ChatWindow() {
   const [isLiveKycOpen, setIsLiveKycOpen] = useState(false);
   const BACKEND_URL =
     import.meta.env.BACKEND_FASTAPI_URL || "http://localhost:8000";
+  const allDocsVerified = docStatus.pan === "verified" && docStatus.aadhaar === "verified" && docStatus.selfie === "verified";
+  const showUploadPanel = requiresUpload && !allDocsVerified;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -678,20 +706,21 @@ export default function ChatWindow() {
     prevAmlRef.current = { amlInBackground, amlStatus };
   }, [amlInBackground, amlStatus]);
 
-  const applyBackendState = (data, options = {}) => {
+  const applyBackendState = useCallback((data, options = {}) => {
     const { appendAssistantMessage = true } = options;
 
     const holdForAml = Boolean(data?.aml_in_background) && data?.stage === "complete";
     if (appendAssistantMessage && data?.message && !holdForAml) {
       setMessages((prev) => {
-        const lastMsg = prev.length > 0 ? prev[prev.length - 1] : null;
-        if (lastMsg && lastMsg.role === "assistant" && lastMsg.text === data.message) {
+        // Check if message already exists (not just the last one) to prevent duplicates
+        const messageExists = prev.some(msg => msg.role === "assistant" && msg.text === data.message);
+        if (messageExists) {
           return prev;
         }
         return [
           ...prev,
           {
-            id: (Date.now() + 1).toString(),
+            id: Date.now().toString() + "_" + Math.random().toString(36).substr(2, 9),
             role: "assistant",
             text: data.message,
           },
@@ -734,10 +763,10 @@ export default function ChatWindow() {
 
     if (data?.progress !== undefined) setProgress(data.progress);
     if (data?.step !== undefined) setCurrentStep(data.step);
-  };
+  }, [amlInBackground]);
 
   useEffect(() => {
-    if (!amlInBackground) return undefined;
+    if (!amlInBackground || stage === "otp_verification" || stage === "complete") return undefined;
 
     const poll = async () => {
       try {
@@ -758,7 +787,31 @@ export default function ChatWindow() {
 
     const timer = setInterval(poll, 4000);
     return () => clearInterval(timer);
-  }, [amlInBackground, BACKEND_URL, sessionId]);
+  }, [amlInBackground, stage, BACKEND_URL, sessionId, applyBackendState]);
+
+  useEffect(() => {
+    if (stage !== "doc_verification") return undefined;
+
+    const poll = async () => {
+      try {
+        const resp = await fetch(`${BACKEND_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            user_input: "",
+          }),
+        });
+        const data = await resp.json();
+        applyBackendState(data, { appendAssistantMessage: true });
+      } catch (err) {
+        console.error("Doc verification poll error:", err);
+      }
+    };
+
+    const timer = setInterval(poll, 3000);
+    return () => clearInterval(timer);
+  }, [stage, BACKEND_URL, sessionId, applyBackendState]);
 
   useEffect(() => {
     if (stage !== "fraud_check" || progress >= 100) return undefined;
@@ -782,7 +835,7 @@ export default function ChatWindow() {
 
     const timer = setInterval(poll, 3000);
     return () => clearInterval(timer);
-  }, [stage, progress, BACKEND_URL, sessionId]);
+  }, [stage, progress, BACKEND_URL, sessionId, applyBackendState]);
 
   const uploadDoc = async (field, endpoint, file) => {
     if (!file) return;
@@ -1040,6 +1093,7 @@ export default function ChatWindow() {
                     }
                     if (data && data.type === "ACCOUNT_ACTIVATED") {
                       const { message: actMsg, account, activatedAt } = data.payload;
+                      console.log("[ACCOUNT_ACTIVATED]", { payload: data.payload, activatedAt, account });
                       return (
                         <div className="flex flex-col gap-3">
                           <p className="whitespace-pre-wrap text-lg font-semibold">{actMsg}</p>
@@ -1058,7 +1112,23 @@ export default function ChatWindow() {
                               <div className="text-green-700 font-medium">Account Type:</div>
                               <div className="font-medium text-gray-900">{account?.accountType}</div>
                               <div className="text-green-700 font-medium">Activated On:</div>
-                              <div className="font-medium text-gray-900">{activatedAt ? new Date(activatedAt).toLocaleString() : ""}</div>
+                              <div className="font-medium text-gray-900">
+                                {activatedAt ? (() => {
+                                  console.log("[RAW_ACTIVATED_AT]", activatedAt);
+                                  try {
+                                    const dateObj = new Date(activatedAt);
+                                    const timestamp = dateObj.getTime();
+                                    console.log("[DATE_PARSE_RESULT]", { activatedAt, timestamp, isValid: timestamp > 0, formatted: dateObj.toLocaleString() });
+                                    if (timestamp > 0) {
+                                      return dateObj.toLocaleString();
+                                    }
+                                    return activatedAt;
+                                  } catch (e) {
+                                    console.error("[DATE_PARSE_ERROR]", e.message, "activatedAt:", activatedAt);
+                                    return activatedAt;
+                                  }
+                                })() : `[ERROR: activatedAt is ${activatedAt}]`}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1200,7 +1270,7 @@ export default function ChatWindow() {
               Resend Code
             </button>
           </form>
-        ) : !requiresUpload ? (
+        ) : !showUploadPanel ? (
           <form onSubmit={handleSubmit} className="flex gap-3 w-full items-center">
             {/* File Upload Button (visible during identity verification) */}
             {currentStep === 2 && (
