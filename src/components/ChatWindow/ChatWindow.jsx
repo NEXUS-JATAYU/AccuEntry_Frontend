@@ -479,29 +479,8 @@ export default function ChatWindow() {
   }, [stage, fraudSignals, fraudRiskScore, fraudStatus, fraudReasoning]);
 
   useEffect(() => {
-    const prev = prevAmlRef.current;
-    if (prev.amlInBackground && !amlInBackground) {
-      if (amlStatus === "clear") {
-        setMessages((old) => [
-          ...old,
-          {
-            id: `${Date.now()}-aml-clear`,
-            role: "assistant",
-            text: "AML screening complete: all checks cleared.",
-          },
-        ]);
-      }
-      if (amlStatus === "flagged") {
-        setMessages((old) => [
-          ...old,
-          {
-            id: `${Date.now()}-aml-flagged`,
-            role: "assistant",
-            text: "AML screening complete: application flagged for compliance review.",
-          },
-        ]);
-      }
-    }
+    // Keep AML status stateful, but avoid injecting synthetic AML completion
+    // chat messages that can conflict with backend-driven stage updates.
     prevAmlRef.current = { amlInBackground, amlStatus };
   }, [amlInBackground, amlStatus]);
 
@@ -948,6 +927,14 @@ export default function ChatWindow() {
               className="px-8 py-3.5 text-[15px] font-bold tracking-wide text-white bg-indigo-600 rounded-full transition-colors hover:bg-indigo-700 disabled:opacity-50 shadow-md hover:shadow-lg active:scale-[0.98]"
             >
               Verify & Activate
+            </button>
+            <button
+              type="button"
+              disabled={isLoading}
+              onClick={() => sendMessage("resend code")}
+              className="px-8 py-3 text-[14px] font-semibold tracking-wide text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full transition-colors hover:bg-indigo-100 disabled:opacity-50"
+            >
+              Resend Code
             </button>
           </form>
         ) : !requiresUpload ? (
