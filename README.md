@@ -489,51 +489,6 @@ VITE_BACKEND_URL=http://127.0.0.1:8000
 
 <br/>
 
----
-
-## 🧪 Running Tests
-
-```bash
-# Backend — test DB connectivity
-cd AccuEntry_Backend
-python test_db_connection.py
-
-# Frontend — lint check
-cd AccuEntry_Frontend
-npm run lint
-```
-
-<br/>
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-```bash
-# 1. Fork and clone
-git clone https://github.com/your-username/accuentry.git
-
-# 2. Create a feature branch
-git checkout -b feature/your-amazing-feature
-
-# 3. Commit with conventional commits
-git commit -m "feat: add amazing feature"
-
-# 4. Push and open a PR
-git push origin feature/your-amazing-feature
-```
-
-**Guidelines:**
-- Follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages
-- Ensure all tests pass before submitting a PR
-- Add tests for new functionality
-- Update docs for any API changes
-- Keep PRs focused — one feature or fix per PR
-
-<br/>
-
 <div align="center">
 
 ```
