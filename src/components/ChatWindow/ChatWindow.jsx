@@ -37,6 +37,26 @@ const AML_CHECKS = [
   { key: "rules", label: "Risk rules" },
 ];
 
+const EDIT_DETAILS_FIELDS = [
+  { key: "account_type", label: "Account Type", type: "select", options: ["Savings", "Current", "Fixed Deposit", "Recurring Deposit"] },
+  { key: "full_name", label: "Full Name", type: "text" },
+  { key: "dob", label: "Date of Birth", type: "date" },
+  { key: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Third Gender"] },
+  { key: "marital_status", label: "Marital Status", type: "select", options: ["Married", "Unmarried", "Others"] },
+  { key: "pan_number", label: "PAN Number", type: "text" },
+  { key: "nationality", label: "Indian Resident", type: "select", options: ["Yes", "No"] },
+  { key: "occupation_type", label: "Occupation", type: "select", options: ["Pvt. Sector", "Govt", "Business", "Student", "Retired", "Other"] },
+  { key: "annual_income", label: "Annual Income", type: "text" },
+  { key: "source_of_funds", label: "Source of Funds", type: "select", options: ["Salary", "Business Income", "Agriculture", "Investment", "Pension", "Others"] },
+  { key: "politically_exposed", label: "Politically Exposed", type: "select", options: ["Yes", "No", "Related to one"] },
+  { key: "mobile_number", label: "Mobile Number", type: "text" },
+  { key: "email_id", label: "Email", type: "email" },
+  { key: "id_proof_type", label: "ID Proof Type", type: "select", options: ["Passport", "Voter ID", "Driving Licence", "Aadhaar", "NREGA Job Card"] },
+  { key: "id_proof_number", label: "ID Proof Number", type: "text" },
+  { key: "address", label: "Address", type: "textarea" },
+  { key: "mode_of_operation", label: "Mode of Operation", type: "select", options: ["Self", "Either or Survivor", "Former or Survivor", "Jointly Operated"] },
+];
+
 const splitFraudSignal = (signal) => {
   const raw = String(signal || "").trim();
   const idx = raw.indexOf(":");
@@ -103,6 +123,15 @@ const formatFraudSignalChatDetail = (signal) => {
     case "dob_unparseable": return "Date of birth could not be parsed reliably.";
     case "address_low_overlap": return `Address overlap against supporting data is low${value ? ` (${value})` : ""}.`;
     default: return `${formatFraudSignalLabel(signal)} was flagged.`;
+  }
+};
+
+const getStructuredMessageType = (text) => {
+  try {
+    const parsed = JSON.parse(text);
+    return parsed?.type || null;
+  } catch {
+    return null;
   }
 };
 
@@ -523,6 +552,105 @@ function LiveKycModal({ isOpen, onClose, sessionId, backendUrl, onComplete }) {
   );
 }
 
+function EditDetailsModal({
+  isOpen,
+  onClose,
+  fields,
+  formData,
+  onFieldChange,
+  onSave,
+  loading,
+  saving,
+  errors,
+  loadError,
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-citi-dark-blue">Edit Captured Details</h3>
+          <button onClick={onClose} disabled={saving} className="text-gray-500 hover:text-gray-700">✕</button>
+        </div>
+
+        <div className="p-6 overflow-y-auto">
+          {loadError && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {loadError}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="text-sm text-gray-600">Loading details...</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {fields.map((field) => {
+                const value = formData[field.key] ?? "";
+                const error = errors[field.key];
+
+                return (
+                  <div key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
+                    <label className="block text-sm font-semibold text-citi-dark-blue mb-1.5">
+                      {field.label}
+                    </label>
+
+                    {field.type === "select" ? (
+                      <select
+                        value={value}
+                        onChange={(e) => onFieldChange(field.key, e.target.value)}
+                        className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20"
+                      >
+                        <option value="">Select {field.label}</option>
+                        {field.options.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : field.type === "textarea" ? (
+                      <textarea
+                        rows={3}
+                        value={value}
+                        onChange={(e) => onFieldChange(field.key, e.target.value)}
+                        className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20"
+                      />
+                    ) : (
+                      <input
+                        type={field.type}
+                        value={value}
+                        onChange={(e) => onFieldChange(field.key, e.target.value)}
+                        className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20"
+                      />
+                    )}
+
+                    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-200 bg-white flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            disabled={saving}
+            className="px-5 py-2.5 rounded-full border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onSave}
+            disabled={loading || saving}
+            className="px-6 py-2.5 rounded-full bg-citi-blue text-white font-bold hover:bg-citi-dark-blue disabled:opacity-50"
+          >
+            {saving ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Chat Window ─────────────────────────────────────────
 export default function ChatWindow() {
   const [input, setInput] = useState("");
@@ -561,6 +689,12 @@ export default function ChatWindow() {
   const fileInputRef = useRef(null);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [isLiveKycOpen, setIsLiveKycOpen] = useState(false);
+  const [isEditDetailsOpen, setIsEditDetailsOpen] = useState(false);
+  const [editDetailsLoading, setEditDetailsLoading] = useState(false);
+  const [editDetailsSaving, setEditDetailsSaving] = useState(false);
+  const [editDetailsError, setEditDetailsError] = useState("");
+  const [editDetailsForm, setEditDetailsForm] = useState({});
+  const [editDetailsFieldErrors, setEditDetailsFieldErrors] = useState({});
   const BACKEND_URL =
     import.meta.env.BACKEND_FASTAPI_URL || "http://localhost:8000";
   const allDocsVerified = docStatus.pan === "verified" && docStatus.aadhaar === "verified" && docStatus.selfie === "verified";
@@ -712,6 +846,23 @@ export default function ChatWindow() {
     const holdForAml = Boolean(data?.aml_in_background) && data?.stage === "complete";
     if (appendAssistantMessage && data?.message && !holdForAml) {
       setMessages((prev) => {
+        const incomingType = getStructuredMessageType(data.message);
+
+        // For OTP prompts, keep only one latest assistant OTP card to avoid chat spam.
+        if (incomingType === "OTP_REQUESTED") {
+          const withoutOldOtpCards = prev.filter(
+            (msg) => !(msg.role === "assistant" && getStructuredMessageType(msg.text) === "OTP_REQUESTED")
+          );
+          return [
+            ...withoutOldOtpCards,
+            {
+              id: Date.now().toString() + "_" + Math.random().toString(36).substr(2, 9),
+              role: "assistant",
+              text: data.message,
+            },
+          ];
+        }
+
         // Check if message already exists (not just the last one) to prevent duplicates
         const messageExists = prev.some(msg => msg.role === "assistant" && msg.text === data.message);
         if (messageExists) {
@@ -1027,6 +1178,87 @@ export default function ChatWindow() {
     sendMessage(input);
   };
 
+  const openEditDetailsModal = async () => {
+    setIsEditDetailsOpen(true);
+    setEditDetailsLoading(true);
+    setEditDetailsError("");
+    setEditDetailsFieldErrors({});
+
+    try {
+      const resp = await fetch(`${BACKEND_URL}/session/${sessionId}/details`);
+      const data = await resp.json();
+      setEditDetailsForm(data.details || {});
+    } catch (err) {
+      setEditDetailsError("Unable to load captured details. Please try again.");
+    } finally {
+      setEditDetailsLoading(false);
+    }
+  };
+
+  const saveEditedDetails = async () => {
+    setEditDetailsSaving(true);
+    setEditDetailsError("");
+    setEditDetailsFieldErrors({});
+
+    try {
+      const resp = await fetch(`${BACKEND_URL}/session/${sessionId}/details`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session_id: sessionId,
+          details: editDetailsForm,
+        }),
+      });
+
+      const data = await resp.json();
+      if (!resp.ok) {
+        setEditDetailsError(data?.detail || "Failed to update details.");
+        return;
+      }
+
+      if (data?.errors && Object.keys(data.errors).length > 0) {
+        setEditDetailsFieldErrors(data.errors);
+        setEditDetailsError(data.message || "Validation failed. Please correct highlighted fields.");
+        return;
+      }
+
+      setEditDetailsForm(data.details || editDetailsForm);
+      setIsEditDetailsOpen(false);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-edit-details-saved`,
+          role: "assistant",
+          text: "Your details were updated successfully and saved to our records. Please continue with identity verification.",
+        },
+      ]);
+
+      // Immediately trigger one backend turn so stage/progress/requires_upload
+      // move forward and doc verification upload UI appears again.
+      setIsLoading(true);
+      try {
+        const nextResp = await fetch(`${BACKEND_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            user_input: "",
+          }),
+        });
+        const nextData = await nextResp.json();
+        applyBackendState(nextData, { appendAssistantMessage: true });
+      } catch (pollErr) {
+        console.error("Post-save flow resume error:", pollErr);
+      } finally {
+        setIsLoading(false);
+      }
+    } catch (err) {
+      setEditDetailsError("Failed to save details. Please try again.");
+    } finally {
+      setEditDetailsSaving(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] max-w-4xl mx-auto bg-gray-50 shadow-inner">
       {/* Step Tracker + Progress Bar */}
@@ -1093,7 +1325,6 @@ export default function ChatWindow() {
                     }
                     if (data && data.type === "ACCOUNT_ACTIVATED") {
                       const { message: actMsg, account, activatedAt } = data.payload;
-                      console.log("[ACCOUNT_ACTIVATED]", { payload: data.payload, activatedAt, account });
                       return (
                         <div className="flex flex-col gap-3">
                           <p className="whitespace-pre-wrap text-lg font-semibold">{actMsg}</p>
@@ -1114,17 +1345,14 @@ export default function ChatWindow() {
                               <div className="text-green-700 font-medium">Activated On:</div>
                               <div className="font-medium text-gray-900">
                                 {activatedAt ? (() => {
-                                  console.log("[RAW_ACTIVATED_AT]", activatedAt);
                                   try {
                                     const dateObj = new Date(activatedAt);
                                     const timestamp = dateObj.getTime();
-                                    console.log("[DATE_PARSE_RESULT]", { activatedAt, timestamp, isValid: timestamp > 0, formatted: dateObj.toLocaleString() });
                                     if (timestamp > 0) {
                                       return dateObj.toLocaleString();
                                     }
                                     return activatedAt;
                                   } catch (e) {
-                                    console.error("[DATE_PARSE_ERROR]", e.message, "activatedAt:", activatedAt);
                                     return activatedAt;
                                   }
                                 })() : `[ERROR: activatedAt is ${activatedAt}]`}
@@ -1171,6 +1399,20 @@ export default function ChatWindow() {
                             className="bg-citi-blue text-white font-bold py-3 px-6 rounded-xl hover:bg-citi-dark-blue transition-colors shadow-md active:scale-95 max-w-xs self-start flex items-center gap-2"
                           >
                             <span>🎥</span> Start Live KYC Video
+                          </button>
+                        </div>
+                      );
+                    }
+                    if (data && data.type === "DETAILS_CONFIRMATION_REQUIRED") {
+                      const { message: detailsMsg, buttonLabel } = data.payload;
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <p className="whitespace-pre-wrap">{detailsMsg}</p>
+                          <button
+                            onClick={openEditDetailsModal}
+                            className="bg-citi-blue text-white font-bold py-3 px-6 rounded-xl hover:bg-citi-dark-blue transition-colors shadow-md active:scale-95 max-w-xs self-start"
+                          >
+                            {buttonLabel || "VIEW DETAILS"}
                           </button>
                         </div>
                       );
@@ -1377,6 +1619,26 @@ export default function ChatWindow() {
         sessionId={sessionId} 
         backendUrl={BACKEND_URL} 
         onComplete={handleLiveKycComplete} 
+      />
+
+      <EditDetailsModal
+        isOpen={isEditDetailsOpen}
+        onClose={() => setIsEditDetailsOpen(false)}
+        fields={EDIT_DETAILS_FIELDS}
+        formData={editDetailsForm}
+        onFieldChange={(key, value) => {
+          setEditDetailsForm((prev) => ({ ...prev, [key]: value }));
+          setEditDetailsFieldErrors((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+        }}
+        onSave={saveEditedDetails}
+        loading={editDetailsLoading}
+        saving={editDetailsSaving}
+        errors={editDetailsFieldErrors}
+        loadError={editDetailsError}
       />
     </div>
   );
