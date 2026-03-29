@@ -336,7 +336,6 @@ cd accuentry
 ```bash
 # Install Ollama → https://ollama.com/download
 ollama pull llama3.2        # Primary model: data capture, AML, decision
-ollama pull gemma2:2b       # Fraud check reasoning model
 ollama serve                # Starts server on port 11434
 ```
 
