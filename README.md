@@ -534,16 +534,6 @@ git push origin feature/your-amazing-feature
 
 <br/>
 
----
-
-## 📄 License
-
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for details.
-
-<br/>
-
----
-
 <div align="center">
 
 ```
