@@ -139,9 +139,9 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-5 shrink-0">
+    <div className="bg-white border-b border-gray-200 px-6 py-3 shrink-0">
       {/* Step Circles */}
-      <div className="flex items-center justify-between mb-4 max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-3 max-w-2xl mx-auto">
         {ONBOARDING_STEPS.map((s, idx) => {
           const isCompleted = s.step < currentStep;
           const isActive = s.step === currentStep;
@@ -153,18 +153,18 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
               <div className="flex flex-col items-center relative">
                 <div
                   className={`
-                    w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
+                    w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
                     transition-all duration-500 ease-in-out shrink-0 relative
                     ${isCompleted
                       ? "bg-green-500 text-white shadow-md shadow-green-200"
                       : isActive
-                        ? "bg-citi-blue text-white shadow-lg shadow-citi-blue/30 ring-4 ring-citi-blue/20"
+                        ? "bg-citi-blue text-white shadow-md shadow-citi-blue/30 ring-2 ring-citi-blue/20"
                         : "bg-gray-200 text-gray-400"
                     }
                   `}
                 >
                   {isCompleted ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                   ) : (
@@ -224,17 +224,17 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
             }}
           />
         </div>
-        <div className="mt-3 flex justify-end">
-          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${amlBadge.className}`}>
+        <div className="mt-2 flex justify-end">
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${amlBadge.className}`}>
             {amlBadge.label}
           </span>
         </div>
         {(amlInBackground || amlStatus === "clear" || amlStatus === "flagged") && (
-          <div className="mt-3 grid gap-2">
+          <div className="mt-2 grid gap-1">
             {AML_CHECKS.map((item) => {
               const status = amlChecks[item.key] || "idle";
               return (
-                <div key={item.key} className="flex items-center justify-between text-xs bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                <div key={item.key} className="flex items-center justify-between text-[11px] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
                   <span className="font-medium text-gray-700">{item.label}</span>
                   <span className="inline-flex items-center gap-2">
                     {status === "checking" && (
@@ -260,17 +260,17 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
         )}
 
         {(stage === "fraud_check" || stage === "manual_review" || stage === "pending_docs" || stage === "escalated" || stage === "complete" || fraudStatus) && (
-          <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <div className="flex items-center justify-between text-xs mb-2">
+          <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-2">
+            <div className="flex items-center justify-between text-[11px] mb-1.5">
               <span className="font-semibold text-citi-dark-blue">Fraud Check Pipeline</span>
               <span className="text-gray-600">
                 {fraudStatus ? `Status: ${fraudStatus}` : "Status: running"}
                 {fraudRiskScore !== null && fraudRiskScore !== undefined ? ` | Risk ${fraudRiskScore}` : ""}
               </span>
             </div>
-            <div className="grid gap-2">
+            <div className="grid gap-1">
               {FRAUD_LAYERS.map((label) => (
-                <div key={label} className="flex items-center justify-between text-xs bg-white border border-gray-200 rounded-md px-3 py-2">
+                <div key={label} className="flex items-center justify-between text-[11px] bg-white border border-gray-200 rounded-md px-2 py-1.5">
                   <span className="font-medium text-gray-700">{label}</span>
                   {(stage === "fraud_check" && !fraudStatus) ? (
                     <span className="inline-flex items-center gap-2 text-amber-700 font-semibold">
@@ -299,6 +299,199 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Live KYC Video Modal ──────────────────────────────────────
+function LiveKycModal({ isOpen, onClose, sessionId, backendUrl, onComplete }) {
+  const [recording, setRecording] = useState(false);
+  const [videoBlob, setVideoBlob] = useState(null);
+  const [stream, setStream] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(3);
+  const [uploading, setUploading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const videoRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      startCamera();
+    } else {
+      stopCamera();
+    }
+  }, [isOpen]);
+
+  // Ensure stream stays bound to videoRef even after React re-renders or unmounts.
+  useEffect(() => {
+    if (videoRef.current && stream && !videoBlob) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, videoBlob]);
+
+  const startCamera = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      setStream(s);
+      if (videoRef.current) videoRef.current.srcObject = s;
+      setErrorMsg("");
+      setVideoBlob(null);
+      setTimeLeft(3);
+    } catch (err) {
+      setErrorMsg("Camera access denied or unavailable.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+  };
+
+  const startRecording = () => {
+    if (!stream) return;
+    setRecording(true);
+    setVideoBlob(null);
+    const options = { mimeType: 'video/webm' };
+    const recorder = new MediaRecorder(stream, options);
+    mediaRecorderRef.current = recorder;
+    const chunks = [];
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      setVideoBlob(blob);
+      setRecording(false);
+    };
+
+    recorder.start();
+
+    let t = 3;
+    setTimeLeft(t);
+    const timer = setInterval(() => {
+      t -= 1;
+      setTimeLeft(t);
+      if (t <= 0) {
+        clearInterval(timer);
+        recorder.stop();
+      }
+    }, 1000);
+  };
+
+  const handleUpload = async () => {
+    if (!videoBlob) return;
+    setUploading(true);
+    setErrorMsg("");
+    const formData = new FormData();
+    formData.append("session_id", sessionId);
+    formData.append("file", videoBlob, "live_kyc.webm");
+
+    try {
+      const resp = await fetch(`${backendUrl}/kyc/video-kyc`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await resp.json();
+      if (data.verified) {
+        onComplete(true, null);
+        onClose();
+      } else {
+        onComplete(false, data.error || "Verification failed");
+        onClose();
+      }
+    } catch (err) {
+      setErrorMsg("Upload failed. Try again.");
+    }
+    setUploading(false);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+        <div className="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+          <h3 className="text-lg font-bold text-gray-800">Live KYC Video</h3>
+          <button onClick={onClose} disabled={uploading || recording} className="text-gray-500 hover:text-gray-800 transition-colors">
+            ✕
+          </button>
+        </div>
+        <div className="p-5 flex flex-col items-center">
+          <div className="w-full aspect-video bg-black rounded-lg overflow-hidden relative shadow-inner">
+            {!videoBlob && (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${!stream ? "hidden" : ""}`}
+              />
+            )}
+            {videoBlob && (
+              <video
+                src={URL.createObjectURL(videoBlob)}
+                autoPlay
+                controls
+                className="w-full h-full object-cover"
+              />
+            )}
+            {!stream && !videoBlob && !errorMsg && (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-400">Loading camera...</div>
+            )}
+            {errorMsg && (
+              <div className="absolute inset-0 flex items-center justify-center text-red-500 bg-red-50/90 text-sm font-semibold p-4 text-center">
+                {errorMsg}
+              </div>
+            )}
+            {recording && (
+              <div className="absolute top-3 right-3 flex items-center gap-2 bg-red-600 text-white px-3 py-1.5 rounded-full text-xs font-bold animate-pulse shadow-md">
+                <span className="w-2 h-2 rounded-full bg-white" />
+                Recording: {timeLeft}s
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-6 flex flex-col w-full gap-3">
+            {!videoBlob ? (
+               <button
+                 onClick={startRecording}
+                 disabled={!stream || recording}
+                 className="w-full py-3.5 bg-citi-blue text-white rounded-xl font-bold hover:bg-citi-dark-blue transition-colors disabled:opacity-50 shadow-md active:scale-95 flex items-center justify-center gap-2"
+               >
+                 {recording ? "Recording..." : "Start 3s Recording"}
+               </button>
+            ) : (
+               <div className="flex gap-3">
+                 <button
+                   onClick={() => setVideoBlob(null)}
+                   disabled={uploading}
+                   className="flex-1 py-3 text-gray-700 bg-gray-100 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50 active:scale-95"
+                 >
+                   Retake
+                 </button>
+                 <button
+                   onClick={handleUpload}
+                   disabled={uploading}
+                   className="flex-1 py-3 text-white bg-green-600 rounded-xl font-bold hover:bg-green-700 transition-colors disabled:opacity-50 shadow-md active:scale-95 flex items-center justify-center"
+                 >
+                   {uploading ? (
+                     <span className="animate-pulse">Uploading...</span>
+                   ) : (
+                     "Submit Video"
+                   )}
+                 </button>
+               </div>
+            )}
+          </div>
+          <p className="mt-4 text-xs text-gray-500 text-center max-w-xs leading-relaxed">
+             Please face the camera and move your head slightly. We need a 3s live video to match with your selfie.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -341,6 +534,7 @@ export default function ChatWindow() {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const [sessionId] = useState(() => crypto.randomUUID());
+  const [isLiveKycOpen, setIsLiveKycOpen] = useState(false);
   const BACKEND_URL =
     import.meta.env.BACKEND_FASTAPI_URL || "http://localhost:8000";
 
@@ -687,6 +881,61 @@ export default function ChatWindow() {
     setIsLoading(false);
   };
 
+  const handleLiveKycComplete = async (success, errorMsg) => {
+    if (success) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          text: `Live Video Verification Successful: **Verified**.\n\nYour identity has been securely confirmed and matches your government ID.`
+        }
+      ]);
+      setIsLoading(true);
+      try {
+        const resp = await fetch(`${BACKEND_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+             session_id: sessionId,
+             user_input: "",
+          }),
+        });
+        const data = await resp.json();
+        applyBackendState(data, { appendAssistantMessage: true });
+      } catch (err) {
+        console.error("Live KYC poll error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      let readableError = errorMsg;
+      if (errorMsg === "blur_detected") readableError = "The video is too blurry. Please hold the camera steadily.";
+      else if (errorMsg === "low_light_detected") readableError = "Lighting is too dim. Please move to a brighter area.";
+      else if (errorMsg === "overexposed_detected") readableError = "Lighting is too bright. Please avoid strong backlight.";
+      else if (errorMsg === "static_video_rejected") readableError = "No motion detected. Please slightly move your head backwards and forwards.";
+      else if (errorMsg === "spoofing_detected") readableError = "Biometric check failed! Please ensure a live person is clearly visible on camera.";
+      else if (errorMsg === "frame_extraction_failed") readableError = "Video processing failed. Please try again.";
+      else if (errorMsg === "selfie_not_uploaded" || errorMsg === "selfie_image_missing") readableError = "Could not locate your previously uploaded selfie to compare.";
+      else if (errorMsg === "invalid_image") readableError = "Extracted video frame was corrupted.";
+      else if (errorMsg === "Verification failed") readableError = "Identity comparison against your uploaded Selfie resulted in a low match score.";
+      
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          text: JSON.stringify({
+            type: "LIVE_KYC_REQUESTED",
+            payload: {
+              message: `Live Video Verification Failed: Not Verified.\n\nReason: ${readableError}\n\nPlease tap the button below to try recording again.`
+            }
+          })
+        }
+      ]);
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -763,7 +1012,7 @@ export default function ChatWindow() {
       />
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 flex flex-col gap-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 flex flex-col gap-4">
         {messages.map((message) => {
           const isUser = message.role === "user";
 
@@ -860,6 +1109,20 @@ export default function ChatWindow() {
                             </div>
                           </div>
                           <p className="text-sm text-gray-600 whitespace-pre-wrap">{nextSteps}</p>
+                        </div>
+                      );
+                    }
+                    if (data && data.type === "LIVE_KYC_REQUESTED") {
+                      const { message: kycMsg } = data.payload;
+                      return (
+                        <div className="flex flex-col gap-3">
+                          <p className="whitespace-pre-wrap">{kycMsg}</p>
+                          <button
+                            onClick={() => setIsLiveKycOpen(true)}
+                            className="bg-citi-blue text-white font-bold py-3 px-6 rounded-xl hover:bg-citi-dark-blue transition-colors shadow-md active:scale-95 max-w-xs self-start flex items-center gap-2"
+                          >
+                            <span>🎥</span> Start Live KYC Video
+                          </button>
                         </div>
                       );
                     }
@@ -1050,6 +1313,14 @@ export default function ChatWindow() {
           </div>
         )}
       </div>
+
+      <LiveKycModal 
+        isOpen={isLiveKycOpen} 
+        onClose={() => setIsLiveKycOpen(false)} 
+        sessionId={sessionId} 
+        backendUrl={BACKEND_URL} 
+        onComplete={handleLiveKycComplete} 
+      />
     </div>
   );
 }
