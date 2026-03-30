@@ -30,7 +30,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://mongodb.com)
-[![MIT License](https://img.shields.io/badge/License-MIT-F7DC6F?style=for-the-badge)](LICENSE)
+
 
 <br/>
 
@@ -351,7 +351,7 @@ source venv/bin/activate          # macOS/Linux
 
 pip install -r requirements.txt
 
-cp .env.example .env              # Edit with your credentials
+# Edit with your credentials in your .env
 
 uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 ```
