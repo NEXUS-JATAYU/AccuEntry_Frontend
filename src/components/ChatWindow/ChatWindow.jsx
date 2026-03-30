@@ -172,8 +172,9 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
       {/* Step Circles */}
       <div className="flex items-center justify-between mb-3 max-w-2xl mx-auto">
         {ONBOARDING_STEPS.map((s, idx) => {
-          const isCompleted = s.step < currentStep;
-          const isActive = s.step === currentStep;
+          const isFlowComplete = progress >= 100;
+          const isCompleted = isFlowComplete ? s.step <= ONBOARDING_STEPS.length : s.step < currentStep;
+          const isActive = !isFlowComplete && s.step === currentStep;
           const isFuture = s.step > currentStep;
 
           return (
@@ -681,6 +682,9 @@ export default function ChatWindow() {
     rules: "idle",
   });
   const amlTimelineRef = useRef(null);
+  const amlPollInFlightRef = useRef(false);
+  const docPollInFlightRef = useRef(false);
+  const fraudPollInFlightRef = useRef(false);
   const prevAmlRef = useRef({ amlInBackground: false, amlStatus: "pending" });
   const fraudPromptRef = useRef({ announced: false, introShown: false, seenSignals: new Set() });
   const fraudReasoningRef = useRef("");
@@ -920,6 +924,8 @@ export default function ChatWindow() {
     if (!amlInBackground || stage === "otp_verification" || stage === "complete") return undefined;
 
     const poll = async () => {
+      if (amlPollInFlightRef.current) return;
+      amlPollInFlightRef.current = true;
       try {
         const resp = await fetch(`${BACKEND_URL}/chat`, {
           method: "POST",
@@ -933,9 +939,12 @@ export default function ChatWindow() {
         applyBackendState(data, { appendAssistantMessage: true });
       } catch (err) {
         console.error("AML status poll error:", err);
+      } finally {
+        amlPollInFlightRef.current = false;
       }
     };
 
+    poll();
     const timer = setInterval(poll, 4000);
     return () => clearInterval(timer);
   }, [amlInBackground, stage, BACKEND_URL, sessionId, applyBackendState]);
@@ -944,6 +953,8 @@ export default function ChatWindow() {
     if (stage !== "doc_verification") return undefined;
 
     const poll = async () => {
+      if (docPollInFlightRef.current) return;
+      docPollInFlightRef.current = true;
       try {
         const resp = await fetch(`${BACKEND_URL}/chat`, {
           method: "POST",
@@ -957,9 +968,12 @@ export default function ChatWindow() {
         applyBackendState(data, { appendAssistantMessage: true });
       } catch (err) {
         console.error("Doc verification poll error:", err);
+      } finally {
+        docPollInFlightRef.current = false;
       }
     };
 
+    poll();
     const timer = setInterval(poll, 3000);
     return () => clearInterval(timer);
   }, [stage, BACKEND_URL, sessionId, applyBackendState]);
@@ -968,6 +982,8 @@ export default function ChatWindow() {
     if (stage !== "fraud_check" || progress >= 100) return undefined;
 
     const poll = async () => {
+      if (fraudPollInFlightRef.current) return;
+      fraudPollInFlightRef.current = true;
       try {
         const resp = await fetch(`${BACKEND_URL}/chat`, {
           method: "POST",
@@ -981,9 +997,12 @@ export default function ChatWindow() {
         applyBackendState(data, { appendAssistantMessage: true });
       } catch (err) {
         console.error("Fraud status poll error:", err);
+      } finally {
+        fraudPollInFlightRef.current = false;
       }
     };
 
+    poll();
     const timer = setInterval(poll, 3000);
     return () => clearInterval(timer);
   }, [stage, progress, BACKEND_URL, sessionId, applyBackendState]);
