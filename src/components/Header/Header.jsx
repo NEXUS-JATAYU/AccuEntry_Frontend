@@ -3,11 +3,31 @@ import { Link } from 'react-router-dom';
 import Icon from '../common/Icon';
 
 const navLinks = [
-    { label: 'Credit Cards', href: '#' },
-    { label: 'Banking', href: '#' },
-    { label: 'Lending', href: '#' },
-    { label: 'Investing', href: '#' },
-    { label: 'Wealth Management', href: '#' },
+    { 
+        label: 'Credit Cards', 
+        href: '#',
+        description: 'View and manage available credit card options'
+    },
+    { 
+        label: 'Banking', 
+        href: '#',
+        description: 'Access checking, savings, and everyday banking services'
+    },
+    { 
+        label: 'Lending', 
+        href: '#',
+        description: 'Explore personal, auto, and home loan solutions'
+    },
+    { 
+        label: 'Investing', 
+        href: '#',
+        description: 'Discover investment tools and opportunities'
+    },
+    { 
+        label: 'Wealth Management', 
+        href: '#',
+        description: 'Personalized financial planning and advisory services'
+    },
 ];
 
 export default function Header({ onOpenAccount }) {
@@ -44,23 +64,40 @@ export default function Header({ onOpenAccount }) {
                 <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-11 py-1">
                     {/* Desktop Nav */}
                     <div className="hidden md:flex items-center gap-1">
-                        {navLinks.map((link) => (
-                            <a
-                                key={link.label}
-                                href={link.href}
-                                className="px-3 py-2 text-sm text-white hover:bg-white/10 rounded transition-colors"
-                            >
-                                {link.label}
-                            </a>
-                        ))}
-                        <button
-                            onClick={onOpenAccount}
-                            className="px-3 py-2 text-sm text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                            Open an Account
-                            <Icon name="chevron-right" className="w-3 h-3" />
-                        </button>
-                    </div>
+    {navLinks.map((link) => (
+        <div key={link.label} className="relative group">
+
+            <a
+                href={link.href}
+                className="px-3 py-2 text-sm text-white hover:bg-white/10 rounded transition-colors"
+            >
+                {link.label}
+            </a>
+
+            {/* Tooltip */}
+            {link.description && (
+                <div className="absolute z-50 left-1/2 -translate-x-1/2 top-full mt-3
+                w-72 min-h-24 bg-white text-gray-800 text-base rounded-xl p-5
+                border border-citi-dark-blue shadow-2xl
+                opacity-0 scale-95 translate-y-1
+                group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0
+                transition-all duration-300 ease-out pointer-events-none">
+
+                    {link.description}
+                </div>
+            )}
+
+        </div>
+    ))}
+
+    <button
+        onClick={() => window.location.href = "/open-account"}
+        className="px-3 py-2 text-sm text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1 cursor-pointer"
+    >
+        Open an Account
+        <Icon name="chevron-right" className="w-3 h-3" />
+    </button>
+</div>
 
                     {/* Mobile Hamburger */}
                     <button
