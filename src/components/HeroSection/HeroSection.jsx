@@ -55,7 +55,7 @@ export default function HeroSection({ chatState, onMinimize, onClose }) {
                             <div className="bg-gradient-to-br from-gray-500 to-gray-700 rounded-xl h-24 sm:h-28 flex items-center justify-center text-white text-xs font-semibold shadow-lg transition-transform hover:-translate-y-1 cursor-pointer">
                                 <div className="text-center drop-shadow-md">
                                     <div className="text-lg sm:text-xl font-bold">nexus</div>
-                                    <div className="text-[10px] opacity-90 tracking-wider">AAdvantage</div>
+                                    <div className="text-[10px] opacity-90 tracking-wider">Advantage</div>
                                 </div>
                             </div>
                         </div>
