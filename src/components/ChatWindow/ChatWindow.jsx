@@ -1,12 +1,82 @@
 /* eslint-disable no-unused-vars */
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+const MotionIcon = ({ type, active, completed }) => {
+  const variants = {
+    inactive: { scale: 0.9, opacity: 0.7 },
+    active: { scale: 1.15, opacity: 1 },
+    completed: { scale: 1, opacity: 1 },
+  };
+
+  const transition = { type: "spring", stiffness: 400, damping: 15 };
+
+  const iconProps = {
+    className: "w-4 h-4",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: "2",
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    variants,
+    initial: "inactive",
+    animate: completed ? "completed" : active ? "active" : "inactive",
+    transition
+  };
+
+  switch (type) {
+    case "clipboard":
+      return (
+        <motion.svg {...iconProps}>
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+          <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+          {active && <motion.path d="M9 14h6M9 18h6M9 10h.01" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5, delay: 0.2 }} />}
+        </motion.svg>
+      );
+    case "id-card":
+      return (
+        <motion.svg {...iconProps}>
+          <rect x="3" y="5" width="18" height="14" rx="2" ry="2"></rect>
+          <path d="M8 10v.01"></path>
+          <path d="M12 10h4"></path>
+          <path d="M12 14h4"></path>
+          {active && <motion.circle cx="8" cy="10" r="2" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.3 }} />}
+        </motion.svg>
+      );
+    case "search":
+      return (
+        <motion.svg {...iconProps}>
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          {active && <motion.circle cx="11" cy="11" r="4" initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 0.5 }} transition={{ repeat: Infinity, duration: 1.5, repeatType: "reverse" }} />}
+        </motion.svg>
+      );
+    case "shield":
+      return (
+        <motion.svg {...iconProps}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          {active && <motion.path d="M9 12l2 2 4-4" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.5, delay: 0.2 }} />}
+        </motion.svg>
+      );
+    case "check":
+      return (
+        <motion.svg {...iconProps}>
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </motion.svg>
+      );
+    default:
+      return null;
+  }
+};
 
 const ONBOARDING_STEPS = [
-  { step: 1, name: "Detail Capture", icon: "📋" },
-  { step: 2, name: "Identity Verification", icon: "🪪" },
-  { step: 3, name: "AML Screening", icon: "🔍" },
-  { step: 4, name: "Fraud Check", icon: "🛡️" },
-  { step: 5, name: "Account Activation", icon: "✅" },
+  { step: 1, name: "Detail Capture", type: "clipboard" },
+  { step: 2, name: "Identity Verification", type: "id-card" },
+  { step: 3, name: "AML Screening", type: "search" },
+  { step: 4, name: "Fraud Check", type: "shield" },
+  { step: 5, name: "Account Activation", type: "check" },
 ];
 
 const stageLabels = {
@@ -186,33 +256,49 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
                     w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold
                     transition-all duration-500 ease-in-out shrink-0 relative
                     ${isCompleted
-                      ? "bg-green-500 text-white shadow-md shadow-green-200"
+                      ? "bg-nexus-gold text-white shadow-md shadow-gold/30"
                       : isActive
-                        ? "bg-citi-blue text-white shadow-md shadow-citi-blue/30 ring-2 ring-citi-blue/20"
+                        ? "bg-nexus-navy text-white shadow-md shadow-navy/30 ring-2 ring-navy/20"
                         : "bg-gray-200 text-gray-400"
                     }
                   `}
                 >
                   {isCompleted ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <motion.svg
+                      initial={{ scale: 0, rotate: -45 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <motion.path
+                        initial={{ pathLength: 0 }}
+                        animate={{ pathLength: 1 }}
+                        transition={{ duration: 0.4, delay: 0.1 }}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </motion.svg>
                   ) : (
-                    <span>{s.icon}</span>
+                    <MotionIcon type={s.type} active={isActive} completed={isCompleted} />
                   )}
                   {/* Pulse animation for active step */}
                   {isActive && (
-                    <span className="absolute inset-0 rounded-full bg-citi-blue/30 animate-ping" style={{ animationDuration: '2s' }} />
+                    <span className="absolute inset-0 rounded-full bg-nexus-navy/30 animate-ping" style={{ animationDuration: '2s' }} />
                   )}
                 </div>
                 <span
                   className={`
-                    text-[11px] mt-1.5 font-medium text-center whitespace-nowrap
+                    text-[11px] mt-1.5 font-medium text-center whitespace-nowrap font-sans
                     transition-colors duration-300
                     ${isCompleted
-                      ? "text-green-600"
+                      ? "text-nexus-gold"
                       : isActive
-                        ? "text-citi-dark-blue font-semibold"
+                        ? "text-nexus-navy font-semibold"
                         : "text-gray-400"
                     }
                   `}
@@ -225,7 +311,7 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
               {idx < ONBOARDING_STEPS.length - 1 && (
                 <div className="flex-1 h-0.5 mx-2 mb-5 relative overflow-hidden rounded-full bg-gray-200">
                   <div
-                    className="absolute inset-y-0 left-0 bg-green-500 transition-all duration-700 ease-in-out rounded-full"
+                    className="absolute inset-y-0 left-0 bg-nexus-gold transition-all duration-700 ease-in-out rounded-full"
                     style={{ width: isCompleted ? "100%" : "0%" }}
                   />
                 </div>
@@ -238,19 +324,17 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
       {/* Progress Bar */}
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center text-xs mb-1.5">
-          <span className="font-semibold text-citi-dark-blue">
+          <span className="font-semibold text-nexus-navy font-display tracking-wide">
             {barLabel}
           </span>
-          <span className="text-gray-500 font-medium">{progress}% Completed</span>
+          <span className="text-gray-500 font-sans font-medium">{progress}% Completed</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
           <div
             className="h-2 rounded-full transition-all duration-500 ease-in-out"
             style={{
               width: `${progress}%`,
-              background: progress >= 100
-                ? "linear-gradient(90deg, #22c55e, #16a34a)"
-                : "linear-gradient(90deg, #056dae, #0891b2)",
+              backgroundColor: "var(--color-navy)",
             }}
           />
         </div>
@@ -565,90 +649,121 @@ function EditDetailsModal({
   errors,
   loadError,
 }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-citi-dark-blue">Edit Captured Details</h3>
-          <button onClick={onClose} disabled={saving} className="text-gray-500 hover:text-gray-700">✕</button>
-        </div>
-
-        <div className="p-6 overflow-y-auto">
-          {loadError && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {loadError}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="text-sm text-gray-600">Loading details...</div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {fields.map((field) => {
-                const value = formData[field.key] ?? "";
-                const error = errors[field.key];
-
-                return (
-                  <div key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
-                    <label className="block text-sm font-semibold text-citi-dark-blue mb-1.5">
-                      {field.label}
-                    </label>
-
-                    {field.type === "select" ? (
-                      <select
-                        value={value}
-                        onChange={(e) => onFieldChange(field.key, e.target.value)}
-                        className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20"
-                      >
-                        <option value="">Select {field.label}</option>
-                        {field.options.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    ) : field.type === "textarea" ? (
-                      <textarea
-                        rows={3}
-                        value={value}
-                        onChange={(e) => onFieldChange(field.key, e.target.value)}
-                        className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20"
-                      />
-                    ) : (
-                      <input
-                        type={field.type}
-                        value={value}
-                        onChange={(e) => onFieldChange(field.key, e.target.value)}
-                        className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20"
-                      />
-                    )}
-
-                    {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="px-6 py-4 border-t border-gray-200 bg-white flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="px-5 py-2.5 rounded-full border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-nexus-navy/40 backdrop-blur-sm p-4"
+        >
+          <motion.div 
+            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] border border-white/20"
           >
-            Cancel
-          </button>
-          <button
-            onClick={onSave}
-            disabled={loading || saving}
-            className="px-6 py-2.5 rounded-full bg-citi-blue text-white font-bold hover:bg-citi-dark-blue disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
-        </div>
-      </div>
-    </div>
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-xl font-display font-bold text-nexus-navy tracking-wide">Edit Captured Details</h3>
+              <button 
+                onClick={onClose} 
+                disabled={saving} 
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-nexus-navy transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              {loadError && (
+                <div className="mb-4 rounded-xl border border-red-200 bg-red-50/50 px-4 py-3 text-sm text-red-700 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  {loadError}
+                </div>
+              )}
+
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-8 h-8 border-4 border-nexus-navy/20 border-t-nexus-navy rounded-full animate-spin" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {fields.map((field) => {
+                    const value = formData[field.key] ?? "";
+                    const error = errors[field.key];
+                    const inputClasses = "w-full rounded-xl border border-gray-200 bg-gray-50/50 px-4 py-3 text-[15px] font-sans focus:bg-white focus:outline-none focus:border-nexus-navy focus:ring-4 focus:ring-nexus-gold/20 transition-all";
+
+                    return (
+                      <div key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
+                        <label className="block text-sm font-semibold text-nexus-navy mb-1.5 font-sans">
+                          {field.label}
+                        </label>
+
+                        {field.type === "select" ? (
+                          <select
+                            value={value}
+                            onChange={(e) => onFieldChange(field.key, e.target.value)}
+                            className={inputClasses}
+                          >
+                            <option value="">Select {field.label}</option>
+                            {field.options.map((opt) => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        ) : field.type === "textarea" ? (
+                          <textarea
+                            rows={3}
+                            value={value}
+                            onChange={(e) => onFieldChange(field.key, e.target.value)}
+                            className={inputClasses}
+                          />
+                        ) : (
+                          <input
+                            type={field.type}
+                            value={value}
+                            onChange={(e) => onFieldChange(field.key, e.target.value)}
+                            className={inputClasses}
+                          />
+                        )}
+
+                        {error && <p className="text-xs text-red-600 mt-1 font-medium">{error}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-5 border-t border-gray-100 bg-gray-50/30 flex justify-end gap-3">
+              <button
+                onClick={onClose}
+                disabled={saving}
+                className="px-6 py-2.5 rounded-full border border-gray-300 text-gray-700 font-bold font-sans hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onSave}
+                disabled={loading || saving}
+                className="px-8 py-2.5 rounded-full bg-nexus-navy text-white font-bold font-sans tracking-wide hover:bg-nexus-gold transition-colors disabled:opacity-50 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2"
+              >
+                {saving ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : "Save Details"}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -1279,7 +1394,7 @@ export default function ChatWindow() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] max-w-4xl mx-auto bg-gray-50 shadow-inner">
+    <div className="flex flex-col h-full w-full bg-[#fcfdfd] relative">
       {/* Step Tracker + Progress Bar */}
       <StepTracker
         currentStep={currentStep}
@@ -1295,35 +1410,39 @@ export default function ChatWindow() {
       />
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 flex flex-col gap-4">
-        {messages.map((message) => {
-          const isUser = message.role === "user";
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 flex flex-col gap-5">
+        <AnimatePresence initial={false}>
+          {messages.map((message) => {
+            const isUser = message.role === "user";
 
-          return (
-            <div
-              key={message.id}
-              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-            >
-              {!isUser && (
-                <div className="w-11 h-11 rounded-full bg-citi-blue text-white flex items-center justify-center text-sm font-bold shrink-0 mr-3 mt-1 shadow-md">
-                  C
-                </div>
-              )}
-              <div
-                className={`max-w-[85%] sm:max-w-[75%] px-5 py-4 text-[15px] leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm ${
-                  isUser
-                    ? "bg-citi-blue text-white rounded-br-sm"
-                    : "bg-white border border-gray-100 text-gray-900 rounded-bl-sm"
-                }`}
+            return (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className={`flex ${isUser ? "justify-end" : "justify-start"}`}
               >
                 {!isUser && (
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-sm font-bold tracking-wide text-citi-blue">
-                      AccuEntry Assistant
-                    </span>
+                  <div className="w-10 h-10 rounded-full bg-nexus-navy text-nexus-gold flex items-center justify-center text-sm font-bold shrink-0 mr-3 mt-1 shadow-md border-2 border-nexus-gold/20">
+                    A
                   </div>
                 )}
-                {(() => {
+                <div
+                  className={`max-w-[85%] sm:max-w-[75%] px-5 py-4 text-[15px] leading-relaxed whitespace-pre-wrap font-sans shadow-md ${
+                    isUser
+                      ? "bg-nexus-navy text-white rounded-2xl rounded-tr-sm"
+                      : "bg-white text-nexus-navy rounded-2xl rounded-tl-sm border border-gray-100"
+                  }`}
+                >
+                  {!isUser && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold tracking-wider text-nexus-gold uppercase">
+                        AccuEntry AI
+                      </span>
+                    </div>
+                  )}
+                  {(() => {
                   try {
                     const data = JSON.parse(message.text);
                     if (data && data.type === "OTP_REQUESTED") {
@@ -1411,13 +1530,14 @@ export default function ChatWindow() {
                     if (data && data.type === "LIVE_KYC_REQUESTED") {
                       const { message: kycMsg } = data.payload;
                       return (
-                        <div className="flex flex-col gap-3">
-                          <p className="whitespace-pre-wrap">{kycMsg}</p>
+                        <div className="flex flex-col gap-4 mt-1">
+                          <p className="whitespace-pre-wrap text-gray-800 leading-relaxed">{kycMsg}</p>
                           <button
                             onClick={() => setIsLiveKycOpen(true)}
-                            className="bg-citi-blue text-white font-bold py-3 px-6 rounded-xl hover:bg-citi-dark-blue transition-colors shadow-md active:scale-95 max-w-xs self-start flex items-center gap-2"
+                            className="bg-nexus-navy text-white font-bold font-sans tracking-wide py-2.5 px-8 rounded-full hover:bg-nexus-gold transition-colors shadow-md hover:shadow-lg active:scale-95 self-start flex items-center gap-3"
                           >
-                            <span>🎥</span> Start Live KYC Video
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                            <span>Start Live KYC Video</span>
                           </button>
                         </div>
                       );
@@ -1425,13 +1545,14 @@ export default function ChatWindow() {
                     if (data && data.type === "DETAILS_CONFIRMATION_REQUIRED") {
                       const { message: detailsMsg, buttonLabel } = data.payload;
                       return (
-                        <div className="flex flex-col gap-3">
-                          <p className="whitespace-pre-wrap">{detailsMsg}</p>
+                        <div className="flex flex-col gap-4 mt-1">
+                          <p className="whitespace-pre-wrap text-gray-800 leading-relaxed">{detailsMsg}</p>
                           <button
                             onClick={openEditDetailsModal}
-                            className="bg-citi-blue text-white font-bold py-3 px-6 rounded-xl hover:bg-citi-dark-blue transition-colors shadow-md active:scale-95 max-w-xs self-start"
+                            className="bg-nexus-navy text-white font-bold font-sans tracking-wide py-2.5 px-8 rounded-full hover:bg-nexus-gold transition-colors shadow-md hover:shadow-lg active:scale-95 self-start flex items-center gap-2"
                           >
-                            {buttonLabel || "VIEW DETAILS"}
+                            <span>{buttonLabel || "VIEW DETAILS"}</span>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
                           </button>
                         </div>
                       );
@@ -1442,30 +1563,39 @@ export default function ChatWindow() {
                   return message.text;
                 })()}
               </div>
-            </div>
+            </motion.div>
           );
         })}
+        </AnimatePresence>
 
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="w-11 h-11 rounded-full bg-citi-blue text-white flex items-center justify-center text-sm font-bold shrink-0 mr-3 shadow-md">
-              C
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="flex justify-start"
+          >
+            <div className="w-10 h-10 rounded-full bg-nexus-navy text-nexus-gold flex items-center justify-center text-sm font-bold shrink-0 mr-3 mt-1 shadow-md border-2 border-nexus-gold/20">
+              A
             </div>
-            <div className="bg-white border border-gray-100 px-5 py-4 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-1.5 h-[56px]">
-              <span
-                className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              />
-              <span
-                className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-bounce"
-                style={{ animationDelay: "150ms" }}
-              />
-              <span
-                className="w-2.5 h-2.5 bg-gray-400 rounded-full animate-bounce"
-                style={{ animationDelay: "300ms" }}
-              />
+            <div className="bg-white border border-gray-100 px-5 py-4 rounded-2xl rounded-tl-sm shadow-md flex items-center gap-2 h-[56px]">
+              {[0, 1, 2].map((i) => (
+                <motion.span
+                  key={i}
+                  className="w-2 h-2 bg-nexus-navy/40 rounded-full"
+                  animate={{ y: [0, -6, 0] }}
+                  transition={{
+                    duration: 0.6,
+                    repeat: Infinity,
+                    repeatType: "loop",
+                    ease: "easeInOut",
+                    delay: i * 0.15,
+                  }}
+                />
+              ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
         <div ref={messagesEndRef} />
@@ -1518,7 +1648,7 @@ export default function ChatWindow() {
             <button
               type="submit"
               disabled={isLoading || otpDigits.join("").length !== 4}
-              className="px-8 py-3.5 text-[15px] font-bold tracking-wide text-white bg-indigo-600 rounded-full transition-colors hover:bg-indigo-700 disabled:opacity-50 shadow-md hover:shadow-lg active:scale-[0.98]"
+              className="px-8 py-3.5 text-[15px] font-bold tracking-wide text-white bg-nexus-navy rounded-full transition-colors hover:bg-nexus-gold disabled:opacity-50 shadow-md hover:shadow-lg active:scale-[0.98]"
             >
               Verify & Activate
             </button>
@@ -1566,66 +1696,147 @@ export default function ChatWindow() {
               placeholder="Type your message..."
               disabled={isLoading}
               aria-label="Chat input"
-              className="flex-1 px-6 py-3.5 text-[15px] border-2 border-gray-200 rounded-full bg-gray-50 text-gray-900 focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20 focus:bg-white transition-all disabled:opacity-50 shadow-inner"
+              className="flex-1 px-6 py-3.5 text-[15px] font-sans border border-gray-200 rounded-full bg-white text-nexus-navy focus:outline-none focus:border-nexus-navy focus:ring-4 focus:ring-nexus-gold/20 transition-all disabled:opacity-50 shadow-sm"
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="px-8 py-3.5 text-[15px] font-bold tracking-wide text-white bg-citi-blue rounded-full transition-colors hover:bg-citi-dark-blue disabled:opacity-50 shadow-md hover:shadow-lg active:scale-[0.98] shrink-0"
+              className="px-8 py-3.5 text-[15px] font-bold font-sans tracking-wide text-white bg-nexus-navy rounded-full transition-colors hover:bg-nexus-gold disabled:opacity-50 shadow-md hover:shadow-lg active:scale-[0.98] shrink-0"
             >
               Send Message
             </button>
           </form>
         ) : (
-          <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full">
-            <p className="text-sm text-gray-600 font-medium">
-              Upload each document below. We verify automatically after you choose a file.
-            </p>
+          <div className="flex flex-col gap-3 max-w-2xl mx-auto w-full">
+            <div className="flex items-center gap-2.5 mb-1">
+              <svg className="w-5 h-5 text-nexus-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <p className="text-sm text-nexus-navy font-semibold font-sans tracking-wide">
+                Upload documents for verification
+              </p>
+            </div>
             {[
-              { key: "pan", label: "PAN Card", endpoint: "/kyc/pan", disabled: false },
-              { key: "aadhaar", label: "Aadhaar Card", endpoint: "/kyc/aadhaar", disabled: false },
+              {
+                key: "pan",
+                label: "PAN Card",
+                endpoint: "/kyc/pan",
+                disabled: false,
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0" /></svg>
+                ),
+              },
+              {
+                key: "aadhaar",
+                label: "Aadhaar Card",
+                endpoint: "/kyc/aadhaar",
+                disabled: false,
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15A2.25 2.25 0 002.25 6.75v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" /></svg>
+                ),
+              },
               {
                 key: "selfie",
                 label: "Selfie",
                 endpoint: "/kyc/selfie",
                 disabled: docStatus.aadhaar !== "verified",
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" /></svg>
+                ),
               },
-            ].map(({ key, label, endpoint, disabled }) => {
+            ].map(({ key, label, endpoint, disabled, icon }) => {
               const st = docStatus[key];
+              const isVerified = st === "verified";
+              const isFailed = st === "failed";
+              const isUploading = st === "uploading";
               return (
-                <div
+                <motion.div
                   key={key}
-                  className={`flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border-2 border-gray-200 px-4 py-3 bg-citi-light-blue/20 focus-within:border-citi-blue focus-within:ring-2 focus-within:ring-citi-blue/20 transition-colors ${
-                    disabled ? "opacity-60" : ""
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className={`relative flex items-center gap-4 rounded-2xl border px-5 py-4 transition-all duration-200 ${
+                    isVerified
+                      ? "border-emerald-300 bg-emerald-50/60"
+                      : isFailed
+                      ? "border-red-300 bg-red-50/60"
+                      : disabled
+                      ? "border-gray-200 bg-gray-50/40 opacity-50 cursor-not-allowed"
+                      : "border-gray-200 bg-white hover:border-nexus-gold/50 hover:shadow-md"
                   }`}
                 >
-                  <label className="text-sm font-semibold text-citi-dark-blue shrink-0 sm:w-36">
-                    {label}
+                  {/* Icon */}
+                  <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+                    isVerified
+                      ? "bg-emerald-100 text-emerald-600"
+                      : isFailed
+                      ? "bg-red-100 text-red-500"
+                      : "bg-nexus-navy/5 text-nexus-navy"
+                  }`}>
+                    {icon}
+                  </div>
+
+                  {/* Label + Status */}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-sm font-semibold font-sans text-nexus-navy tracking-wide">{label}</span>
+                    <span className="text-xs mt-0.5">
+                      {isUploading && (
+                        <span className="text-nexus-gold font-medium flex items-center gap-1">
+                          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
+                          Verifying...
+                        </span>
+                      )}
+                      {isVerified && (
+                        <span className="text-emerald-600 font-semibold flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                          Verified
+                        </span>
+                      )}
+                      {isFailed && (
+                        <span className="text-red-500 font-semibold flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                          Failed — tap to retry
+                        </span>
+                      )}
+                      {!isUploading && !isVerified && !isFailed && (
+                        <span className="text-gray-400">
+                          {disabled ? "Unlock after Aadhaar" : "Tap to upload"}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Upload Button */}
+                  <label className={`shrink-0 cursor-pointer ${(disabled || isLoading) ? "pointer-events-none opacity-40" : ""}`}>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={disabled || isLoading}
+                      aria-label={`Upload ${label}`}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadDoc(key, endpoint, f);
+                        e.target.value = "";
+                      }}
+                      className="hidden"
+                    />
+                    <span className={`inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold font-sans tracking-wide rounded-full transition-all shadow-sm ${
+                      isVerified
+                        ? "bg-emerald-500 text-white"
+                        : "bg-nexus-navy text-white hover:bg-nexus-gold hover:shadow-md"
+                    }`}>
+                      {isVerified ? (
+                        <>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                          Done
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                          Upload
+                        </>
+                      )}
+                    </span>
                   </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={disabled || isLoading}
-                    aria-label={`Upload ${label}`}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) uploadDoc(key, endpoint, f);
-                      e.target.value = "";
-                    }}
-                    className="block w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-citi-blue file:text-white hover:file:bg-citi-dark-blue file:cursor-pointer disabled:opacity-50 file:shadow-sm"
-                  />
-                  <span className="text-sm sm:ml-auto sm:text-right min-h-[1.25rem] shrink-0">
-                    {st === "uploading" && (
-                      <span className="text-citi-blue font-medium">Checking...</span>
-                    )}
-                    {st === "verified" && (
-                      <span className="text-green-600 font-semibold">Verified</span>
-                    )}
-                    {st === "failed" && (
-                      <span className="text-red-600 font-semibold">Failed — retry</span>
-                    )}
-                  </span>
-                </div>
+                </motion.div>
               );
             })}
           </div>

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../common/Icon';
 
@@ -74,14 +75,14 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
         return (
             <div className="animate-in bg-white border border-gray-200 rounded-xl w-full flex flex-col shadow-2xl overflow-hidden h-[420px] lg:max-w-xs relative z-30">
                 {/* Header */}
-                <div className="bg-citi-dark-blue text-white px-4 py-3 flex items-center justify-between shrink-0 shadow-sm">
+                <div className="bg-nexus-navy text-white px-4 py-3 flex items-center justify-between shrink-0 shadow-sm">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                            <Icon name="chat" className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
+                            <Icon name="chat" className="w-4 h-4 text-nexus-gold" />
                         </div>
                         <div>
-                            <p className="text-sm font-bold leading-tight tracking-wide">AccuEntry Assistant</p>
-                            <p className="text-[10px] text-white/70 font-medium">Account Opening</p>
+                            <p className="text-sm font-bold font-display tracking-wide">AccuEntry Assistant</p>
+                            <p className="text-[10px] text-nexus-gold font-sans font-medium uppercase tracking-wider">Account Opening</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -99,27 +100,35 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
 
                 {/* Progress Bar Area */}
                 <div className="bg-white border-b border-gray-200 px-4 py-2 flex flex-col gap-1.5 shrink-0">
-                    <div className="flex justify-between items-center text-[11px] font-semibold text-citi-dark-blue">
+                    <div className="flex justify-between items-center text-[11px] font-semibold text-nexus-navy font-display">
                         <span>{progress < 100 ? 'Detail Capture' : 'Identity Verification'}</span>
-                        <span>{progress}%</span>
+                        <span className="font-sans text-gray-500">{progress}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-1.5">
-                        <div className="bg-citi-blue h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                        <div className="bg-nexus-navy h-1.5 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
                     </div>
                 </div>
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 flex flex-col">
-                    {messages.map((message) => {
-                        const isUser = message.role === 'user';
-                        return (
-                            <div key={message.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
-                                <div className={`max-w-[85%] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm ${isUser ? 'bg-citi-blue text-white rounded-br-sm' : 'bg-white border border-gray-100 text-gray-900 rounded-bl-sm'}`}>
-                                    {message.text}
-                                </div>
-                            </div>
-                        );
-                    })}
+                    <AnimatePresence initial={false}>
+                        {messages.map((message) => {
+                            const isUser = message.role === 'user';
+                            return (
+                                <motion.div
+                                    key={message.id}
+                                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                    className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
+                                >
+                                    <div className={`max-w-[85%] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm font-sans ${isUser ? 'bg-nexus-navy text-white rounded-br-sm' : 'bg-white border border-gray-100 text-nexus-navy rounded-bl-sm'}`}>
+                                        {message.text}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
 
                     {isLoading && (
                         <div className="flex justify-start mb-3">
@@ -140,7 +149,7 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                             <button
                                 key={label}
                                 onClick={() => sendMessage(`I want to open a ${label}`)}
-                                className="py-1.5 px-3 text-[11px] font-semibold border border-citi-blue text-citi-blue rounded-full hover:bg-citi-light-blue transition-colors shadow-sm"
+                                className="py-1.5 px-3 text-[11px] font-semibold font-sans border border-nexus-navy/20 text-nexus-navy bg-white rounded-full hover:border-nexus-gold hover:text-nexus-gold transition-colors shadow-sm"
                             >
                                 {label}
                             </button>
@@ -157,12 +166,12 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Type your message..."
                             disabled={isLoading}
-                            className="flex-1 px-4 py-2 text-sm border-2 border-gray-200 rounded-full bg-white text-gray-900 focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20 transition-all disabled:opacity-50"
+                            className="flex-1 px-4 py-2 text-sm font-sans border border-gray-200 rounded-full bg-white text-nexus-navy focus:outline-none focus:border-nexus-navy focus:ring-2 focus:ring-nexus-gold/20 transition-all disabled:opacity-50 shadow-sm"
                         />
                         <button
                             type="submit"
                             disabled={isLoading || !input.trim()}
-                            className="w-9 h-9 bg-citi-blue text-white rounded-full flex items-center justify-center transition-colors hover:bg-citi-dark-blue disabled:opacity-50 shadow-md shrink-0"
+                            className="w-9 h-9 bg-nexus-navy text-white rounded-full flex items-center justify-center transition-colors hover:bg-nexus-gold disabled:opacity-50 shadow-md shrink-0"
                             aria-label="Send message"
                         >
                             <Icon name="send" className="w-4 h-4" />
@@ -177,14 +186,14 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
     return (
         <div className="fixed bottom-20 right-4 sm:right-6 animate-in bg-white shadow-2xl border border-gray-200 rounded-xl flex flex-col overflow-hidden w-[340px] sm:w-[370px] max-w-[calc(100vw-32px)] h-[520px] max-h-[calc(100vh-120px)] z-50">
             {/* Header */}
-            <div className="bg-citi-dark-blue text-white px-5 py-4 flex items-center justify-between shrink-0 shadow-md">
+            <div className="bg-nexus-navy text-white px-5 py-4 flex items-center justify-between shrink-0 shadow-md">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-                        <Icon name="chat" className="w-4.5 h-4.5" />
+                    <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center border border-white/20">
+                        <Icon name="chat" className="w-4.5 h-4.5 text-nexus-gold" />
                     </div>
                     <div>
-                        <p className="text-[15px] font-bold leading-tight tracking-wide">AccuEntry Assistant</p>
-                        <p className="text-[11px] text-white/70 font-medium mt-0.5">Account Opening</p>
+                        <p className="text-[15px] font-bold font-display tracking-wide">AccuEntry Assistant</p>
+                        <p className="text-[11px] text-nexus-gold font-sans font-medium uppercase tracking-wider mt-0.5">Account Opening</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -202,27 +211,35 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
 
             {/* Progress Bar Area */}
             <div className="bg-white border-b border-gray-200 px-5 py-3 flex flex-col gap-1.5 shrink-0">
-                <div className="flex justify-between items-center text-xs font-semibold text-citi-dark-blue">
+                <div className="flex justify-between items-center text-xs font-semibold text-nexus-navy font-display tracking-wide">
                     <span>{progress < 100 ? 'Detail Capture' : 'Identity Verification'}</span>
-                    <span>{progress}%</span>
+                    <span className="font-sans text-gray-500">{progress}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-citi-blue h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+                    <div className="bg-nexus-navy h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
                 </div>
             </div>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-5 py-4 bg-gray-50 flex flex-col">
-                {messages.map((message) => {
-                    const isUser = message.role === 'user';
-                    return (
-                        <div key={message.id} className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
-                            <div className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm ${isUser ? 'bg-citi-blue text-white rounded-br-sm' : 'bg-white border border-gray-100 text-gray-900 rounded-bl-sm'}`}>
-                                {message.text}
-                            </div>
-                        </div>
-                    );
-                })}
+                <AnimatePresence initial={false}>
+                    {messages.map((message) => {
+                        const isUser = message.role === 'user';
+                        return (
+                            <motion.div
+                                key={message.id}
+                                initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
+                            >
+                                <div className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm font-sans ${isUser ? 'bg-nexus-navy text-white rounded-br-sm' : 'bg-white border border-gray-100 text-nexus-navy rounded-bl-sm'}`}>
+                                    {message.text}
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
 
                 {isLoading && (
                     <div className="flex justify-start mb-4">
@@ -243,7 +260,7 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                         <button
                             key={label}
                             onClick={() => sendMessage(`I want to open a ${label}`)}
-                            className="py-1.5 px-3.5 text-xs font-semibold border border-citi-blue text-citi-blue rounded-full hover:bg-citi-light-blue transition-colors shadow-sm"
+                            className="py-1.5 px-3.5 text-xs font-semibold font-sans border border-nexus-navy/20 text-nexus-navy bg-white rounded-full hover:border-nexus-gold hover:text-nexus-gold transition-colors shadow-sm"
                         >
                             {label}
                         </button>
@@ -260,12 +277,12 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Type your message..."
                         disabled={isLoading}
-                        className="flex-1 px-4 py-2.5 text-sm border-2 border-gray-200 rounded-full bg-gray-50 text-gray-900 focus:outline-none focus:border-citi-blue focus:ring-2 focus:ring-citi-blue/20 focus:bg-white transition-all disabled:opacity-50"
+                        className="flex-1 px-4 py-2.5 text-sm font-sans border border-gray-200 rounded-full bg-white text-nexus-navy focus:outline-none focus:border-nexus-navy focus:ring-2 focus:ring-nexus-gold/20 transition-all disabled:opacity-50 shadow-sm"
                     />
                     <button
                         type="submit"
                         disabled={isLoading || !input.trim()}
-                        className="w-10 h-10 bg-citi-blue text-white rounded-full flex items-center justify-center transition-colors hover:bg-citi-dark-blue disabled:opacity-50 shadow-md shrink-0"
+                        className="w-10 h-10 bg-nexus-navy text-white rounded-full flex items-center justify-center transition-colors hover:bg-nexus-gold disabled:opacity-50 shadow-md shrink-0"
                         aria-label="Send message"
                     >
                         <Icon name="send" className="w-4.5 h-4.5 ml-0.5" />

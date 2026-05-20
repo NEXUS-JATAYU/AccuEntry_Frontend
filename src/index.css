@@ -2,19 +2,71 @@
 @import 'tw-animate-css';
 
 @theme inline {
+  /* ── Core Brand ── */
   --color-citi-blue: #056dae;
   --color-citi-dark-blue: #003b70;
   --color-citi-light-blue: #e8f4fd;
   --color-citi-red: #ec1c2e;
+
+  /* ── Extended Palette ── */
+  --color-nexus-navy: #0A1628;
+  --color-nexus-navy-light: #142240;
+  --color-nexus-gold: #C9963B;
+  --color-nexus-gold-light: #E8C580;
+  --color-nexus-emerald: #10B981;
+  --color-nexus-slate: #94A3B8;
+  --color-nexus-surface: #F8FAFC;
+  --color-nexus-surface-warm: #FAFAF5;
+
+  /* ── Typography ── */
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    color: #1E293B;
+    background-color: var(--color-nexus-surface);
+  }
+
+  ::selection {
+    background-color: #056dae;
+    color: white;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-citi-blue);
+    outline-offset: 2px;
+    border-radius: 4px;
   }
 }
 
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* ── Utility: Hide Scrollbar ── */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -24,18 +76,14 @@
   display: none;
 }
 
-@keyframes slideUpIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-in {
-  animation: slideUpIn 0.25s ease-out;
 }
