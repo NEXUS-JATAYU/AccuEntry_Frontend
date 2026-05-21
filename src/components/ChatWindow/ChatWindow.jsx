@@ -783,6 +783,7 @@ export default function ChatWindow() {
   });
   const [amlStatus, setAmlStatus] = useState("pending");
   const [amlInBackground, setAmlInBackground] = useState(false);
+  const [sessionEnded, setSessionEnded] = useState(false);
   const [fraudStatus, setFraudStatus] = useState(null);
   const [fraudRiskScore, setFraudRiskScore] = useState(null);
   const [fraudSignals, setFraudSignals] = useState([]);
@@ -998,6 +999,7 @@ export default function ChatWindow() {
       });
     }
     if (data?.stage) setStage(data.stage);
+    if (data?.session_ended !== undefined) setSessionEnded(Boolean(data.session_ended));
     if (data?.requires_upload !== undefined) setRequiresUpload(data.requires_upload);
     if (data?.aml_status !== undefined && data?.aml_status !== null) {
       setAmlStatus(data.aml_status);
@@ -1036,7 +1038,7 @@ export default function ChatWindow() {
   }, [amlInBackground]);
 
   useEffect(() => {
-    if (!amlInBackground || stage === "otp_verification" || stage === "complete") return undefined;
+    if (!amlInBackground || stage === "otp_verification" || stage === "complete" || sessionEnded) return undefined;
 
     const poll = async () => {
       if (amlPollInFlightRef.current) return;
@@ -1062,10 +1064,10 @@ export default function ChatWindow() {
     poll();
     const timer = setInterval(poll, 4000);
     return () => clearInterval(timer);
-  }, [amlInBackground, stage, BACKEND_URL, sessionId, applyBackendState]);
+  }, [amlInBackground, stage, sessionEnded, BACKEND_URL, sessionId, applyBackendState]);
 
   useEffect(() => {
-    if (stage !== "doc_verification") return undefined;
+    if (stage !== "doc_verification" || sessionEnded) return undefined;
 
     const poll = async () => {
       if (docPollInFlightRef.current) return;
@@ -1091,10 +1093,10 @@ export default function ChatWindow() {
     poll();
     const timer = setInterval(poll, 3000);
     return () => clearInterval(timer);
-  }, [stage, BACKEND_URL, sessionId, applyBackendState]);
+  }, [stage, sessionEnded, BACKEND_URL, sessionId, applyBackendState]);
 
   useEffect(() => {
-    if (stage !== "fraud_check" || progress >= 100) return undefined;
+    if (stage !== "fraud_check" || progress >= 100 || sessionEnded) return undefined;
 
     const poll = async () => {
       if (fraudPollInFlightRef.current) return;
@@ -1120,10 +1122,10 @@ export default function ChatWindow() {
     poll();
     const timer = setInterval(poll, 3000);
     return () => clearInterval(timer);
-  }, [stage, progress, BACKEND_URL, sessionId, applyBackendState]);
+  }, [stage, progress, sessionEnded, BACKEND_URL, sessionId, applyBackendState]);
 
   const uploadDoc = async (field, endpoint, file) => {
-    if (!file) return;
+    if (!file || sessionEnded) return;
     setDocStatus((prev) => ({ ...prev, [field]: "uploading" }));
     const formData = new FormData();
     formData.append("session_id", sessionId);
@@ -1166,7 +1168,7 @@ export default function ChatWindow() {
   };
 
   const sendMessage = async (text) => {
-    if (!text.trim() || isLoading) return;
+    if (!text.trim() || isLoading || sessionEnded) return;
 
     const newMessages = [
       ...messages,
@@ -1626,7 +1628,7 @@ export default function ChatWindow() {
                   maxLength={1}
                   aria-label={`OTP digit ${idx + 1}`}
                   value={digit}
-                  disabled={isLoading}
+                  disabled={isLoading || sessionEnded}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/, "");
                     setOtpDigits((prev) => {
@@ -1647,14 +1649,14 @@ export default function ChatWindow() {
             </div>
             <button
               type="submit"
-              disabled={isLoading || otpDigits.join("").length !== 4}
+              disabled={isLoading || sessionEnded || otpDigits.join("").length !== 4}
               className="px-8 py-3.5 text-[15px] font-bold tracking-wide text-white bg-nexus-navy rounded-full transition-colors hover:bg-nexus-gold disabled:opacity-50 shadow-md hover:shadow-lg active:scale-[0.98]"
             >
               Verify & Activate
             </button>
             <button
               type="button"
-              disabled={isLoading}
+              disabled={isLoading || sessionEnded}
               onClick={() => sendMessage("resend code")}
               className="px-8 py-3 text-[14px] font-semibold tracking-wide text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full transition-colors hover:bg-indigo-100 disabled:opacity-50"
             >
@@ -1678,7 +1680,7 @@ export default function ChatWindow() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isLoading}
+                  disabled={isLoading || sessionEnded}
                   className="p-3 rounded-full bg-gray-100 hover:bg-citi-light-blue text-citi-blue transition-colors disabled:opacity-50 shrink-0"
                   title="Upload document (PDF, PNG, JPEG)"
                   aria-label="Upload document button"
@@ -1694,13 +1696,13 @@ export default function ChatWindow() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Type your message..."
-              disabled={isLoading}
+              disabled={isLoading || sessionEnded}
               aria-label="Chat input"
               className="flex-1 px-6 py-3.5 text-[15px] font-sans border border-gray-200 rounded-full bg-white text-nexus-navy focus:outline-none focus:border-nexus-navy focus:ring-4 focus:ring-nexus-gold/20 transition-all disabled:opacity-50 shadow-sm"
             />
             <button
               type="submit"
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || sessionEnded || !input.trim()}
               className="px-8 py-3.5 text-[15px] font-bold font-sans tracking-wide text-white bg-nexus-navy rounded-full transition-colors hover:bg-nexus-gold disabled:opacity-50 shadow-md hover:shadow-lg active:scale-[0.98] shrink-0"
             >
               Send Message

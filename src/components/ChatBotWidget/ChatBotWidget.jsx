@@ -14,7 +14,8 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
     const [messages, setMessages] = useState([MOCK_START_MESSAGE]);
     const [isLoading, setIsLoading] = useState(false);
     const [progress, setProgress] = useState(0);
-    const [sessionId] = useState(() => crypto.randomUUID());
+    const [sessionId, setSessionId] = useState(() => crypto.randomUUID());
+    const [sessionEnded, setSessionEnded] = useState(false);
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
     const BACKEND_URL = import.meta.env.BACKEND_FASTAPI_URL || 'http://localhost:8000';
@@ -24,7 +25,7 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
     }, [messages, isLoading]);
 
     const sendMessage = async (text) => {
-        if (!text.trim() || isLoading) return;
+        if (!text.trim() || isLoading || sessionEnded) return;
 
         const newMessages = [...messages, { id: Date.now().toString(), role: 'user', text }];
         setMessages(newMessages);
@@ -50,6 +51,7 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
             ]);
 
             if (data.progress !== undefined) setProgress(data.progress);
+            if (data.session_ended) setSessionEnded(true);
 
         } catch (error) {
             console.error("Chat error:", error);
@@ -68,6 +70,14 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
     };
 
     const handleMaximize = () => navigate('/open-account');
+    const restartChat = () => {
+        setSessionId(crypto.randomUUID());
+        setInput('');
+        setMessages([MOCK_START_MESSAGE]);
+        setIsLoading(false);
+        setProgress(0);
+        setSessionEnded(false);
+    };
 
     const userMsgCount = messages.filter((m) => m.role === 'user').length;
 
@@ -159,18 +169,26 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
 
                 {/* Input */}
                 <div className="bg-white border-t border-gray-200 px-3 py-3 shrink-0">
+                    {sessionEnded && (
+                        <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                            <span>Your session ended because of inactivity.</span>
+                            <button type="button" onClick={restartChat} className="font-semibold text-nexus-navy hover:text-nexus-gold">
+                                Start new chat
+                            </button>
+                        </div>
+                    )}
                     <form onSubmit={handleSubmit} className="flex gap-2">
                         <input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="Type your message..."
-                            disabled={isLoading}
+                            disabled={isLoading || sessionEnded}
                             className="flex-1 px-4 py-2 text-sm font-sans border border-gray-200 rounded-full bg-white text-nexus-navy focus:outline-none focus:border-nexus-navy focus:ring-2 focus:ring-nexus-gold/20 transition-all disabled:opacity-50 shadow-sm"
                         />
                         <button
                             type="submit"
-                            disabled={isLoading || !input.trim()}
+                            disabled={isLoading || sessionEnded || !input.trim()}
                             className="w-9 h-9 bg-nexus-navy text-white rounded-full flex items-center justify-center transition-colors hover:bg-nexus-gold disabled:opacity-50 shadow-md shrink-0"
                             aria-label="Send message"
                         >
@@ -270,18 +288,26 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
 
             {/* Input */}
             <div className="bg-white border-t border-gray-200 px-4 py-3.5 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                {sessionEnded && (
+                    <div className="mb-2 flex items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
+                        <span>Your session ended because of inactivity.</span>
+                        <button type="button" onClick={restartChat} className="font-semibold text-nexus-navy hover:text-nexus-gold">
+                            Start new chat
+                        </button>
+                    </div>
+                )}
                 <form onSubmit={handleSubmit} className="flex gap-2.5">
                     <input
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Type your message..."
-                        disabled={isLoading}
+                        disabled={isLoading || sessionEnded}
                         className="flex-1 px-4 py-2.5 text-sm font-sans border border-gray-200 rounded-full bg-white text-nexus-navy focus:outline-none focus:border-nexus-navy focus:ring-2 focus:ring-nexus-gold/20 transition-all disabled:opacity-50 shadow-sm"
                     />
                     <button
                         type="submit"
-                        disabled={isLoading || !input.trim()}
+                        disabled={isLoading || sessionEnded || !input.trim()}
                         className="w-10 h-10 bg-nexus-navy text-white rounded-full flex items-center justify-center transition-colors hover:bg-nexus-gold disabled:opacity-50 shadow-md shrink-0"
                         aria-label="Send message"
                     >
