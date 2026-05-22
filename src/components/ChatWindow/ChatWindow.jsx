@@ -228,6 +228,10 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
       label: "AML: Flagged",
       className: "bg-red-100 text-red-700 border border-red-200",
     },
+    review: {
+      label: "AML: Review",
+      className: "bg-orange-100 text-orange-700 border border-orange-200",
+    },
     pending: {
       label: "AML: Pending",
       className: "bg-gray-100 text-gray-600 border border-gray-200",
@@ -343,7 +347,7 @@ function StepTracker({ currentStep, progress, barLabel, stage, amlStatus, amlInB
             {amlBadge.label}
           </span>
         </div>
-        {(amlInBackground || amlStatus === "clear" || amlStatus === "flagged") && (
+        {(amlInBackground || amlStatus === "clear" || amlStatus === "flagged" || amlStatus === "review") && (
           <div className="mt-2 grid gap-1">
             {AML_CHECKS.map((item) => {
               const status = amlChecks[item.key] || "idle";
@@ -826,7 +830,7 @@ export default function ChatWindow() {
 
   useEffect(() => {
     if (!amlInBackground) {
-      if (amlStatus === "clear" || amlStatus === "flagged") {
+      if (amlStatus === "clear" || amlStatus === "flagged" || amlStatus === "review") {
         setAmlChecks({
           sanctions: "done",
           rbi: "done",
@@ -1135,12 +1139,28 @@ export default function ChatWindow() {
         method: "POST",
         body: formData,
       });
-      const data = await resp.json();
+      let data = {};
+      try {
+        data = await resp.json();
+      } catch {
+        data = {};
+      }
+      if (!resp.ok) {
+        const detail = data?.detail;
+        const msg = typeof detail === "string" ? detail : detail?.message || `HTTP ${resp.status}`;
+        console.error("Upload error:", msg);
+        setDocStatus((prev) => ({ ...prev, [field]: "failed" }));
+        return;
+      }
       setDocStatus((prev) => ({
         ...prev,
         [field]: data.verified ? "verified" : "failed",
       }));
-    } catch {
+      if (!data.verified && data.error) {
+        console.warn(`Verify ${field} failed:`, data.error, data.checks || {});
+      }
+    } catch (err) {
+      console.error("Upload network error:", err);
       setDocStatus((prev) => ({ ...prev, [field]: "failed" }));
     }
 
