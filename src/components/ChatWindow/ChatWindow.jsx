@@ -93,6 +93,52 @@ const stageLabels = {
   rejected: "Application rejected",
 };
 
+const STAGE_PROGRESS_FLOOR = {
+  data_capture: 0,
+  doc_verification: 40,
+  kyc_approval: 65,
+  aml_screening: 70,
+  fraud_check: 80,
+  decision_agent: 85,
+  manual_review: 85,
+  pending_docs: 85,
+  escalated: 85,
+  otp_verification: 95,
+  complete: 100,
+  rejected: 100,
+};
+
+const STAGE_TO_STEP = {
+  data_capture: 1,
+  doc_verification: 2,
+  kyc_approval: 3,
+  aml_screening: 3,
+  fraud_check: 4,
+  manual_review: 5,
+  pending_docs: 5,
+  escalated: 5,
+  otp_verification: 5,
+  complete: 5,
+  rejected: 5,
+};
+
+const resolveProgressFromBackend = (data) => {
+  const stage = data?.stage;
+  const apiProgress = Number.isFinite(Number(data?.progress)) ? Number(data.progress) : 0;
+  if (stage === "complete" || stage === "rejected") return 100;
+  const floor = STAGE_PROGRESS_FLOOR[stage];
+  if (floor != null) return Math.min(100, Math.max(apiProgress, floor));
+  return Math.min(100, Math.max(0, apiProgress));
+};
+
+const resolveStepFromBackend = (data) => {
+  if (data?.step !== undefined && data?.step !== null) {
+    const step = Number(data.step);
+    if (Number.isFinite(step) && step >= 1) return step;
+  }
+  return STAGE_TO_STEP[data?.stage] ?? 1;
+};
+
 const FRAUD_LAYERS = [
   "Rule checks",
   "Behavioural signals",
@@ -1027,19 +1073,49 @@ export default function ChatWindow() {
       setOtpRequired(Boolean(data.otp_required));
     }
 
+    const resolvedProgress = resolveProgressFromBackend(data);
+    const resolvedStep = resolveStepFromBackend(data);
+
     const inBg = data?.aml_in_background !== undefined ? Boolean(data.aml_in_background) : amlInBackground;
     if (inBg) {
-      setProgress((prev) => {
-        const incoming = data?.progress !== undefined ? data.progress : prev;
-        return Math.max(65, Math.min(incoming, 80));
-      });
+      setProgress(Math.max(65, Math.min(resolvedProgress, 80)));
       setCurrentStep(3);
       return;
     }
 
-    if (data?.progress !== undefined) setProgress(data.progress);
-    if (data?.step !== undefined) setCurrentStep(data.step);
+    setProgress(resolvedProgress);
+    setCurrentStep(resolvedStep);
   }, [amlInBackground]);
+
+  useEffect(() => {
+    if (sessionEnded) return undefined;
+
+    let cancelled = false;
+    const syncSession = async () => {
+      try {
+        const resp = await fetch(`${BACKEND_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: sessionId,
+            user_input: "",
+          }),
+        });
+        const data = await resp.json();
+        if (!cancelled) {
+          applyBackendState(data, { appendAssistantMessage: false });
+        }
+      } catch (err) {
+        console.error("Session progress sync error:", err);
+      }
+    };
+
+    syncSession();
+    return () => {
+      cancelled = true;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- sync once per session id
+  }, [sessionId, sessionEnded, BACKEND_URL]);
 
   useEffect(() => {
     if (!amlInBackground || stage === "otp_verification" || stage === "complete" || sessionEnded) return undefined;
