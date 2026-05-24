@@ -18,7 +18,10 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
     const [sessionEnded, setSessionEnded] = useState(false);
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
-    const BACKEND_URL = import.meta.env.BACKEND_FASTAPI_URL || 'http://localhost:8000';
+    const BACKEND_URL =
+        import.meta.env.VITE_BACKEND_FASTAPI_URL ||
+        import.meta.env.BACKEND_FASTAPI_URL ||
+        'http://localhost:8000';
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

@@ -866,7 +866,9 @@ export default function ChatWindow() {
   const [editDetailsForm, setEditDetailsForm] = useState({});
   const [editDetailsFieldErrors, setEditDetailsFieldErrors] = useState({});
   const BACKEND_URL =
-    import.meta.env.BACKEND_FASTAPI_URL || "http://localhost:8000";
+    import.meta.env.VITE_BACKEND_FASTAPI_URL ||
+    import.meta.env.BACKEND_FASTAPI_URL ||
+    "http://localhost:8000";
   const allDocsVerified = docStatus.pan === "verified" && docStatus.aadhaar === "verified" && docStatus.selfie === "verified";
   const showUploadPanel = requiresUpload && !allDocsVerified;
 
