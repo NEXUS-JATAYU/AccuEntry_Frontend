@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getBackendApiBaseUrl } from "../../config/apiBase";
 
 const MotionIcon = ({ type, active, completed }) => {
   const variants = {
@@ -865,10 +866,7 @@ export default function ChatWindow() {
   const [editDetailsError, setEditDetailsError] = useState("");
   const [editDetailsForm, setEditDetailsForm] = useState({});
   const [editDetailsFieldErrors, setEditDetailsFieldErrors] = useState({});
-  const BACKEND_URL =
-    import.meta.env.VITE_BACKEND_FASTAPI_URL ||
-    import.meta.env.BACKEND_FASTAPI_URL ||
-    "http://localhost:8000";
+  const BACKEND_URL = getBackendApiBaseUrl();
   const allDocsVerified = docStatus.pan === "verified" && docStatus.aadhaar === "verified" && docStatus.selfie === "verified";
   const showUploadPanel = requiresUpload && !allDocsVerified;
 

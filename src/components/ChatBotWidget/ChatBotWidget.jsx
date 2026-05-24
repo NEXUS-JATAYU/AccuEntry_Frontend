@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../common/Icon';
+import { getBackendApiBaseUrl } from '../../config/apiBase';
 
 const MOCK_START_MESSAGE = {
     id: 'welcome',
@@ -18,10 +19,7 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
     const [sessionEnded, setSessionEnded] = useState(false);
     const messagesEndRef = useRef(null);
     const navigate = useNavigate();
-    const BACKEND_URL =
-        import.meta.env.VITE_BACKEND_FASTAPI_URL ||
-        import.meta.env.BACKEND_FASTAPI_URL ||
-        'http://localhost:8000';
+    const BACKEND_URL = getBackendApiBaseUrl();
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
