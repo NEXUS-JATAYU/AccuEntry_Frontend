@@ -252,6 +252,99 @@ const getStructuredMessageType = (text) => {
   }
 };
 
+const parseInlineFormatting = (text) => {
+  if (typeof text !== "string") return text;
+  
+  const parts = text.split("**");
+  if (parts.length === 1) return text;
+  
+  return parts.map((part, idx) => {
+    if (idx % 2 === 1) {
+      return (
+        <strong key={idx} className="font-extrabold text-nexus-navy">
+          {part}
+        </strong>
+      );
+    }
+    return part;
+  });
+};
+
+const renderFormattedText = (text) => {
+  if (typeof text !== "string") return text;
+  
+  const lines = text.split("\n");
+  
+  return lines.map((line, lineIdx) => {
+    if (!line.trim()) {
+      return <div key={lineIdx} className="h-2" />;
+    }
+    
+    if (line.startsWith("### ")) {
+      return (
+        <h3 key={lineIdx} className="text-[15px] font-bold text-nexus-navy mt-3 mb-1.5 font-display flex items-center">
+          {parseInlineFormatting(line.substring(4))}
+        </h3>
+      );
+    }
+    if (line.startsWith("## ")) {
+      return (
+        <h2 key={lineIdx} className="text-base font-bold text-nexus-navy mt-4 mb-2 font-display flex items-center">
+          {parseInlineFormatting(line.substring(3))}
+        </h2>
+      );
+    }
+    if (line.startsWith("# ")) {
+      return (
+        <h1 key={lineIdx} className="text-lg font-extrabold text-nexus-navy mt-4 mb-2 font-display flex items-center">
+          {parseInlineFormatting(line.substring(2))}
+        </h1>
+      );
+    }
+    
+    const trimmed = line.trim();
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+      const prefixMatch = line.match(/^(\s*)([-*]\s+)/);
+      const indent = prefixMatch ? prefixMatch[1].length : 0;
+      const content = line.substring(line.indexOf("- ") !== -1 ? line.indexOf("- ") + 2 : line.indexOf("* ") + 2);
+      return (
+        <div 
+          key={lineIdx} 
+          className="flex items-start gap-2 my-1" 
+          style={{ paddingLeft: `${indent * 8 + 4}px` }}
+        >
+          <span className="text-nexus-gold select-none mt-1.5 shrink-0 text-[10px]">●</span>
+          <span className="flex-1 text-gray-700 font-sans">{parseInlineFormatting(content)}</span>
+        </div>
+      );
+    }
+    
+    const numMatch = trimmed.match(/^(\d+)\.\s+(.*)$/);
+    if (numMatch) {
+      const num = numMatch[1];
+      const content = numMatch[2];
+      const prefixMatch = line.match(/^(\s*)/);
+      const indent = prefixMatch ? prefixMatch[1].length : 0;
+      return (
+        <div 
+          key={lineIdx} 
+          className="flex items-start gap-2 my-1"
+          style={{ paddingLeft: `${indent * 8 + 4}px` }}
+        >
+          <span className="text-nexus-navy font-bold font-sans select-none shrink-0 min-w-[14px] text-[13px] mt-0.5">{num}.</span>
+          <span className="flex-1 text-gray-700 font-sans">{parseInlineFormatting(content)}</span>
+        </div>
+      );
+    }
+    
+    return (
+      <p key={lineIdx} className="text-gray-700 font-sans mb-1 leading-relaxed">
+        {parseInlineFormatting(line)}
+      </p>
+    );
+  });
+};
+
 const MOCK_START_MESSAGE = {
   id: "welcome",
   role: "assistant",
@@ -1547,7 +1640,7 @@ export default function ChatWindow() {
                       const { message: otpMsg } = data.payload;
                       return (
                         <div className="flex flex-col gap-3">
-                          <p className="whitespace-pre-wrap">{otpMsg}</p>
+                          <div className="space-y-1">{renderFormattedText(otpMsg)}</div>
                           <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center">
                             <p className="text-sm text-indigo-700 font-medium">
                               📧 Check your email for the 4-digit code
@@ -1563,7 +1656,7 @@ export default function ChatWindow() {
                       const { message: actMsg, account, activatedAt } = data.payload;
                       return (
                         <div className="flex flex-col gap-3">
-                          <p className="whitespace-pre-wrap text-lg font-semibold">{actMsg}</p>
+                          <div className="space-y-1 text-lg font-semibold">{renderFormattedText(actMsg)}</div>
                           <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
                             <div className="flex items-center justify-between mb-3 border-b border-green-200 pb-2">
                               <span className="text-green-800 font-bold">Account Details</span>
@@ -1602,7 +1695,7 @@ export default function ChatWindow() {
                       const { message: actMsg, account, nextSteps } = data.payload;
                       return (
                         <div className="flex flex-col gap-3">
-                          <p>{actMsg}</p>
+                          <div className="space-y-1">{renderFormattedText(actMsg)}</div>
                           <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-sm">
                             <div className="flex items-center justify-between mb-3 border-b border-green-200 pb-2">
                               <span className="text-green-800 font-bold">Account Details</span>
@@ -1621,7 +1714,7 @@ export default function ChatWindow() {
                               <div className="font-medium text-gray-900">{account.features?.join(", ")}</div>
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600 whitespace-pre-wrap">{nextSteps}</p>
+                          <div className="space-y-1 text-sm text-gray-600">{renderFormattedText(nextSteps)}</div>
                         </div>
                       );
                     }
@@ -1629,7 +1722,7 @@ export default function ChatWindow() {
                       const { message: kycMsg } = data.payload;
                       return (
                         <div className="flex flex-col gap-4 mt-1">
-                          <p className="whitespace-pre-wrap text-gray-800 leading-relaxed">{kycMsg}</p>
+                          <div className="space-y-1 text-gray-800 leading-relaxed">{renderFormattedText(kycMsg)}</div>
                           <button
                             onClick={() => setIsLiveKycOpen(true)}
                             className="bg-nexus-navy text-white font-bold font-sans tracking-wide py-2.5 px-8 rounded-full hover:bg-nexus-gold transition-colors shadow-md hover:shadow-lg active:scale-95 self-start flex items-center gap-3"
@@ -1644,7 +1737,7 @@ export default function ChatWindow() {
                       const { message: detailsMsg, buttonLabel } = data.payload;
                       return (
                         <div className="flex flex-col gap-4 mt-1">
-                          <p className="whitespace-pre-wrap text-gray-800 leading-relaxed">{detailsMsg}</p>
+                          <div className="space-y-1 text-gray-800 leading-relaxed">{renderFormattedText(detailsMsg)}</div>
                           <button
                             onClick={openEditDetailsModal}
                             className="bg-nexus-navy text-white font-bold font-sans tracking-wide py-2.5 px-8 rounded-full hover:bg-nexus-gold transition-colors shadow-md hover:shadow-lg active:scale-95 self-start flex items-center gap-2"
@@ -1658,7 +1751,7 @@ export default function ChatWindow() {
                   } catch (e) {
                     // Not a structured message, render normally
                   }
-                  return message.text;
+                  return <div className="space-y-1">{renderFormattedText(message.text)}</div>;
                 })()}
               </div>
             </motion.div>
