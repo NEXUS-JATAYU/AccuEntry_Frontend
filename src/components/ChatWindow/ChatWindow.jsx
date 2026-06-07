@@ -252,7 +252,7 @@ const getStructuredMessageType = (text) => {
   }
 };
 
-const parseInlineFormatting = (text) => {
+const parseInlineFormatting = (text, isUserMessage = false) => {
   if (typeof text !== "string") return text;
   
   const parts = text.split("**");
@@ -261,7 +261,7 @@ const parseInlineFormatting = (text) => {
   return parts.map((part, idx) => {
     if (idx % 2 === 1) {
       return (
-        <strong key={idx} className="font-extrabold text-nexus-navy">
+        <strong key={idx} className={`font-extrabold ${isUserMessage ? "text-white" : "text-nexus-navy"}`}>
           {part}
         </strong>
       );
@@ -270,7 +270,7 @@ const parseInlineFormatting = (text) => {
   });
 };
 
-const renderFormattedText = (text) => {
+const renderFormattedText = (text, isUserMessage = false) => {
   if (typeof text !== "string") return text;
   
   const lines = text.split("\n");
@@ -282,22 +282,22 @@ const renderFormattedText = (text) => {
     
     if (line.startsWith("### ")) {
       return (
-        <h3 key={lineIdx} className="text-[15px] font-bold text-nexus-navy mt-3 mb-1.5 font-display flex items-center">
-          {parseInlineFormatting(line.substring(4))}
+        <h3 key={lineIdx} className={`text-[15px] font-bold mt-3 mb-1.5 font-display flex items-center ${isUserMessage ? "text-white" : "text-nexus-navy"}`}>
+          {parseInlineFormatting(line.substring(4), isUserMessage)}
         </h3>
       );
     }
     if (line.startsWith("## ")) {
       return (
-        <h2 key={lineIdx} className="text-base font-bold text-nexus-navy mt-4 mb-2 font-display flex items-center">
-          {parseInlineFormatting(line.substring(3))}
+        <h2 key={lineIdx} className={`text-base font-bold mt-4 mb-2 font-display flex items-center ${isUserMessage ? "text-white" : "text-nexus-navy"}`}>
+          {parseInlineFormatting(line.substring(3), isUserMessage)}
         </h2>
       );
     }
     if (line.startsWith("# ")) {
       return (
-        <h1 key={lineIdx} className="text-lg font-extrabold text-nexus-navy mt-4 mb-2 font-display flex items-center">
-          {parseInlineFormatting(line.substring(2))}
+        <h1 key={lineIdx} className={`text-lg font-extrabold mt-4 mb-2 font-display flex items-center ${isUserMessage ? "text-white" : "text-nexus-navy"}`}>
+          {parseInlineFormatting(line.substring(2), isUserMessage)}
         </h1>
       );
     }
@@ -313,8 +313,8 @@ const renderFormattedText = (text) => {
           className="flex items-start gap-2 my-1" 
           style={{ paddingLeft: `${indent * 8 + 4}px` }}
         >
-          <span className="text-nexus-gold select-none mt-1.5 shrink-0 text-[10px]">●</span>
-          <span className="flex-1 text-gray-700 font-sans">{parseInlineFormatting(content)}</span>
+          <span className={`${isUserMessage ? "text-white" : "text-nexus-gold"} select-none mt-1.5 shrink-0 text-[10px]`}>●</span>
+          <span className={`flex-1 font-sans ${isUserMessage ? "text-white" : "text-gray-700"}`}>{parseInlineFormatting(content, isUserMessage)}</span>
         </div>
       );
     }
@@ -331,15 +331,15 @@ const renderFormattedText = (text) => {
           className="flex items-start gap-2 my-1"
           style={{ paddingLeft: `${indent * 8 + 4}px` }}
         >
-          <span className="text-nexus-navy font-bold font-sans select-none shrink-0 min-w-[14px] text-[13px] mt-0.5">{num}.</span>
-          <span className="flex-1 text-gray-700 font-sans">{parseInlineFormatting(content)}</span>
+          <span className={`font-bold font-sans select-none shrink-0 min-w-[14px] text-[13px] mt-0.5 ${isUserMessage ? "text-white" : "text-nexus-navy"}`}>{num}.</span>
+          <span className={`flex-1 font-sans ${isUserMessage ? "text-white" : "text-gray-700"}`}>{parseInlineFormatting(content, isUserMessage)}</span>
         </div>
       );
     }
     
     return (
-      <p key={lineIdx} className="text-gray-700 font-sans mb-1 leading-relaxed">
-        {parseInlineFormatting(line)}
+      <p key={lineIdx} className={`font-sans mb-1 leading-relaxed ${isUserMessage ? "text-white" : "text-gray-700"}`}>
+        {parseInlineFormatting(line, isUserMessage)}
       </p>
     );
   });
@@ -1752,7 +1752,7 @@ export default function ChatWindow() {
                   } catch (e) {
                     // Not a structured message, render normally
                   }
-                  return <div className="space-y-1">{renderFormattedText(message.text)}</div>;
+                  return <div className="space-y-1">{renderFormattedText(message.text, isUser)}</div>;
                 })()}
               </div>
             </motion.div>
