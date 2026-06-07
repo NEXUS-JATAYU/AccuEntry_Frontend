@@ -1625,6 +1625,7 @@ export default function ChatWindow() {
                       ? "bg-nexus-navy text-white rounded-2xl rounded-tr-sm"
                       : "bg-white text-nexus-navy rounded-2xl rounded-tl-sm border border-gray-100"
                   }`}
+                  style={isUser ? { color: '#ffffff' } : undefined}
                 >
                   {!isUser && (
                     <div className="flex items-center gap-2 mb-2">

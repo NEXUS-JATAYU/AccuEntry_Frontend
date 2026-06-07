@@ -133,7 +133,10 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                     className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}
                                 >
-                                    <div className={`max-w-[85%] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm font-sans ${isUser ? 'bg-nexus-navy text-white rounded-br-sm' : 'bg-white border border-gray-100 text-nexus-navy rounded-bl-sm'}`}>
+                                    <div
+                                        className={`max-w-[85%] px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm font-sans ${isUser ? 'bg-nexus-navy text-white rounded-br-sm' : 'bg-white border border-gray-100 text-nexus-navy rounded-bl-sm'}`}
+                                        style={isUser ? { color: '#ffffff' } : undefined}
+                                    >
                                         {message.text}
                                     </div>
                                 </motion.div>
@@ -252,7 +255,10 @@ export default function ChatBotWidget({ mode, onMinimize, onClose }) {
                                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
                                 className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}
                             >
-                                <div className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm font-sans ${isUser ? 'bg-nexus-navy text-white rounded-br-sm' : 'bg-white border border-gray-100 text-nexus-navy rounded-bl-sm'}`}>
+                                <div
+                                    className={`max-w-[85%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap rounded-2xl shadow-sm font-sans ${isUser ? 'bg-nexus-navy text-white rounded-br-sm' : 'bg-white border border-gray-100 text-nexus-navy rounded-bl-sm'}`}
+                                    style={isUser ? { color: '#ffffff' } : undefined}
+                                >
                                     {message.text}
                                 </div>
                             </motion.div>
